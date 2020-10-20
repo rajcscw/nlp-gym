@@ -1,7 +1,7 @@
-from sprl_package.data_pools.multi_label_pool import MultiLabelPool
-from sprl_package.data_pools.base import Sample
-from sprl_package.util import get_sample_weights
-from sprl_package import aapd_data_path
+from nlp_gym.data_pools.multi_label_pool import MultiLabelPool
+from nlp_gym.data_pools.base import Sample
+from nlp_gym.util import get_sample_weights
+from nlp_gym import aapd_data_path
 from collections import defaultdict
 from typing import List, Dict
 from nltk.corpus import reuters

@@ -1,12 +1,12 @@
-from sprl_package.envs.base_env import BaseEnv
-from sprl_package.envs.observation.observation import Observation
-from sprl_package.data_pools.base import Sample
-from sprl_package.envs.reward.base import RewardFunction
-from sprl_package.envs.reward.seq_tagging import EntityF1Score
-from sprl_package.envs.observation.base_featurizer import ObservationFeaturizer
-from sprl_package.envs.observation.seq_tagging import DefaultFeaturizerForSeqTagging
-from sprl_package.core_components.sampler import PrioritySampler
-from sprl_package.envs.action.action_space import ActionSpace
+from nlp_gym.envs.base_env import BaseEnv
+from nlp_gym.envs.observation.observation import Observation
+from nlp_gym.data_pools.base import Sample
+from nlp_gym.envs.reward.base import RewardFunction
+from nlp_gym.envs.reward.seq_tagging import EntityF1Score
+from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
+from nlp_gym.envs.observation.seq_tagging import DefaultFeaturizerForSeqTagging
+from nlp_gym.core_components.sampler import PrioritySampler
+from nlp_gym.envs.action.action_space import ActionSpace
 from typing import Tuple, List, Union
 from dataclasses import dataclass
 import copy

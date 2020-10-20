@@ -1,11 +1,11 @@
 from abc import abstractmethod
 from typing import Tuple, List, Union
 import torch
-from sprl_package.envs.observation.observation import Observation
-from sprl_package.envs.reward.base import RewardFunction
-from sprl_package.data_pools.base import Sample
-from sprl_package.envs.observation.base_featurizer import ObservationFeaturizer
-from sprl_package.envs.action.action_space import ActionSpace
+from nlp_gym.envs.observation.observation import Observation
+from nlp_gym.envs.reward.base import RewardFunction
+from nlp_gym.data_pools.base import Sample
+from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
+from nlp_gym.envs.action.action_space import ActionSpace
 from gym import spaces
 import gym
 import numpy as np

@@ -1,4 +1,4 @@
-from sprl_package.data_pools.question_answering_pool import QADataPool, Sample
+from nlp_gym.data_pools.question_answering_pool import QADataPool, Sample
 import tensorflow_datasets as tfds
 import tensorflow as tf
 

@@ -1,19 +1,5 @@
-from seqeval.metrics.sequence_labeling import f1_score, precision_score, recall_score
 from typing import List
-from sklearn.metrics import classification_report, f1_score, precision_score, recall_score
-
-
-class SeqTaggingMetric:
-    def __call__(self, true_labels: List[List[str]], predicted_labels: List[List[str]]):
-        precision = precision_score(true_labels, predicted_labels)
-        recall = recall_score(true_labels, predicted_labels)
-        f1 = f1_score(true_labels, predicted_labels)
-        metrics_dict = {
-            "micro_precision": precision,
-            "micro_recall": recall,
-            "micro_f1": f1
-        }
-        return metrics_dict
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 
 class EntityScores:

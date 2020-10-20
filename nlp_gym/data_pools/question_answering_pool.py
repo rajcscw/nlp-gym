@@ -3,7 +3,7 @@ from abc import abstractclassmethod
 from dataclasses import dataclass
 from typing import Dict, List
 
-from sprl_package.data_pools.base import DataPool
+from nlp_gym.data_pools.base import DataPool
 
 
 @dataclass(init=True)
@@ -38,7 +38,7 @@ class QADataPool(DataPool):
         A factory method to instantiate data pool
         """
         raise NotImplementedError
-    
+
     def split(self, split_ratios: List[float]) -> List['QADataPool']:
         start_ix = 0
         pools = []

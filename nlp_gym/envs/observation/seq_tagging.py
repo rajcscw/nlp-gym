@@ -3,10 +3,9 @@ from typing import List, Union
 import torch
 from flair.data import Sentence
 from flair.embeddings import BytePairEmbeddings, FlairEmbeddings, StackedEmbeddings, Embeddings, WordEmbeddings
-import flair
 
-from sprl_package.envs.action.action_space import ActionSpace
-from sprl_package.envs.observation.base_featurizer import ObservationFeaturizer
+from nlp_gym.envs.action.action_space import ActionSpace
+from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
 
 
 class EmbeddingRegistry:

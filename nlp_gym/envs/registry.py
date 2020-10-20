@@ -1,11 +1,11 @@
-from sprl_package.envs.multi_label_env import MultiLabelEnv
-from sprl_package.envs.seq_tag_env import SeqTagEnv
-from sprl_package.envs.question_answering_env import QAEnv
-from sprl_package.envs.reward.multi_label import F1RewardFunction
-from sprl_package.envs.reward.seq_tagging import F1Score, EntityF1Score
-from sprl_package.envs.observation.seq_tagging import DefaultFeaturizerForSeqTagging
-from sprl_package.envs.observation.question_answering import DefaultSimpleFeaturizerForQA, DefaultFeaturizerForQA
-from sprl_package.envs.observation.multi_label import DefaultFeaturizerForMultiLabelRank
+from nlp_gym.envs.multi_label_env import MultiLabelEnv
+from nlp_gym.envs.seq_tag_env import SeqTagEnv
+from nlp_gym.envs.question_answering_env import QAEnv
+from nlp_gym.envs.reward.multi_label import F1RewardFunction
+from nlp_gym.envs.reward.seq_tagging import F1Score, EntityF1Score
+from nlp_gym.envs.observation.seq_tagging import DefaultFeaturizerForSeqTagging
+from nlp_gym.envs.observation.question_answering import DefaultSimpleFeaturizerForQA, DefaultFeaturizerForQA
+from nlp_gym.envs.observation.multi_label import DefaultFeaturizerForMultiLabelRank
 from typing import Any, Dict
 
 

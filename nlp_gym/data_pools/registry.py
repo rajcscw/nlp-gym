@@ -1,8 +1,8 @@
-from sprl_package.data_pools.custom_multi_label_pools import ReutersDataPool, AAPDDataPool
-from sprl_package.data_pools.custom_seq_tagging_pools import UDPosTagggingPool, WikiNERTaggingPool, CONLLNerTaggingPool, GermEvalTaggingPool
-from sprl_package.data_pools.custom_question_answering_pools import AIRC, QASC
+from nlp_gym.data_pools.custom_multi_label_pools import ReutersDataPool, AAPDDataPool
+from nlp_gym.data_pools.custom_seq_tagging_pools import UDPosTagggingPool, CONLLNerTaggingPool
+from nlp_gym.data_pools.custom_question_answering_pools import AIRC, QASC
 
-from sprl_package.data_pools.base import DataPool
+from nlp_gym.data_pools.base import DataPool
 from typing import Any, Dict, List
 
 
@@ -14,9 +14,7 @@ class DataPoolRegistry:
 
         # Sequence Tagging
         "UDPosTagPool": UDPosTagggingPool,
-        "WikiNERTaggingPool": WikiNERTaggingPool,
         "CONLLNerTaggingPool": CONLLNerTaggingPool,
-        "GermEvalTaggingPool": GermEvalTaggingPool,
 
         # Question answering
         "AIRC": AIRC,

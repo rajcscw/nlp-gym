@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from flair.embeddings import DocumentPoolEmbeddings, BytePairEmbeddings
-from sprl_package.envs.action_space import ActionSpace
+from nlp_gym.envs.action_space import ActionSpace
 import torch
 from typing import List, Union
 from flair.data import Sentence

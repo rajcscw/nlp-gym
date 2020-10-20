@@ -1,5 +1,5 @@
-from sprl_package.envs.observation.observation import Observation
-from sprl_package.envs.reward.base import RewardFunction
+from nlp_gym.envs.observation.observation import Observation
+from nlp_gym.envs.reward.base import RewardFunction
 from typing import List
 import copy
 

@@ -1,4 +1,4 @@
-from sprl_package.data_pools.base import DataPool, Sample
+from nlp_gym.data_pools.base import DataPool, Sample
 from typing import Tuple, List
 from abc import abstractclassmethod
 import random

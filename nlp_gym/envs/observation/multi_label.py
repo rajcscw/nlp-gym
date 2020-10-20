@@ -9,8 +9,8 @@ from flair.embeddings import (BytePairEmbeddings, DocumentPoolEmbeddings,
                               Embeddings, WordEmbeddings)
 from nltk import SnowballStemmer
 from nltk.corpus import stopwords
-from sprl_package.envs.action.action_space import ActionSpace
-from sprl_package.envs.observation.base_featurizer import ObservationFeaturizer
+from nlp_gym.envs.action.action_space import ActionSpace
+from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
 
 
 class TextPreProcessor:

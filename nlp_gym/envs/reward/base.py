@@ -1,5 +1,5 @@
 
-from sprl_package.envs.observation.observation import Observation
+from nlp_gym.envs.observation.observation import Observation
 from abc import ABC, abstractclassmethod
 from typing import List
 

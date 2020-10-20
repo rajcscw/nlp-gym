@@ -1,7 +1,7 @@
-from sprl_package.metrics.multi_label import HammingLoss, JaccardScore, PrecisionScore, RecallScore, F1Score
-from sprl_package.metrics.seq_tag import SeqTaggingMetric, EntityScoresCorpus
-from sprl_package.metrics.multi_label import F1ScoreCorpus
-from sprl_package.metrics.question_answer import MatchScore
+from nlp_gym.metrics.multi_label import HammingLoss, JaccardScore, PrecisionScore, RecallScore, F1Score
+from nlp_gym.metrics.seq_tag import SeqTaggingMetric, EntityScoresCorpus
+from nlp_gym.metrics.multi_label import F1ScoreCorpus
+from nlp_gym.metrics.question_answer import MatchScore
 from typing import Any, Dict
 
 

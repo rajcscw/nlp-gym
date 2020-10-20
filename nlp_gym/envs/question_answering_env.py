@@ -1,7 +1,7 @@
-from sprl_package.envs.base_env import BaseEnv
-from sprl_package.envs.observation.question_answering import ObservationFeaturizer, DefaultFeaturizerForQA, Observation
-from sprl_package.envs.action.action_space import ActionSpace
-from sprl_package.data_pools.question_answering_pool import Sample
+from nlp_gym.envs.base_env import BaseEnv
+from nlp_gym.envs.observation.question_answering import ObservationFeaturizer, DefaultFeaturizerForQA, Observation
+from nlp_gym.envs.action.action_space import ActionSpace
+from nlp_gym.data_pools.question_answering_pool import Sample
 
 from gym import spaces
 import numpy as np

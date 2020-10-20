@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List
-from sprl_package.envs.observation.base_featurizer import ObservationFeaturizer
+from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
 import torch
 import copy
 
