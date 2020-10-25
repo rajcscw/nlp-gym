@@ -8,6 +8,6 @@ setup(name="nlp_gym",
       packages=find_packages(),
       install_requires=["numpy", "torch", "nltk", "flair", "pandas", "matplotlib",
                         "seaborn", "sklearn", "tqdm", "edit_distance", "rich",
-                        "tensorflow==1.15.0",  "gym", "pytorch-nlp",
+                        "tensorflow==2.1.0",  "gym", "pytorch-nlp",
                         "tensorflow-datasets", "tfds-nightly",
                         "datasets"])
