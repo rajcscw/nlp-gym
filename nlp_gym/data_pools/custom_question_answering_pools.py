@@ -1,6 +1,5 @@
 from nlp_gym.data_pools.question_answering_pool import QADataPool, Sample
 import tensorflow_datasets as tfds
-import tensorflow as tf
 
 
 class QASC(QADataPool):
@@ -49,7 +48,6 @@ class AIRC(QADataPool):
         if split == "val":
             split = "validation"
 
-        tf.enable_eager_execution()
         ds = tfds.load(dataset_id, split=split, shuffle_files=True)
 
         samples = []

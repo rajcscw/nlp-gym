@@ -47,8 +47,8 @@ class ReutersDataPool(MultiLabelPool):
 
                 # here we split the train into train and val sets
                 if split in ["train", "val"]:
-                    split_ratio = 0.7  ## for training
-                    split_ix = int(len(doc_ids) * split_ratio)
+                    val_split_ratio = 0.7
+                    split_ix = int(len(doc_ids) * val_split_ratio)
                     train_doc_ids, val_doc_ids = doc_ids[:split_ix], doc_ids[split_ix:]
                     doc_ids = train_doc_ids if split == "train" else val_doc_ids
 
