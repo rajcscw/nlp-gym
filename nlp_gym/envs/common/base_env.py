@@ -1,11 +1,9 @@
 from abc import abstractmethod
 from typing import Tuple, List, Union
-import torch
-from nlp_gym.envs.observation.observation import Observation
+from nlp_gym.envs.common.observation import BaseObservation, BaseObservationFeaturizer
 from nlp_gym.envs.reward.base import RewardFunction
 from nlp_gym.data_pools.base import Sample
-from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
-from nlp_gym.envs.action.action_space import ActionSpace
+from nlp_gym.envs.common.action_space import ActionSpace
 from gym import spaces
 import gym
 import numpy as np
@@ -16,7 +14,7 @@ class BaseEnv(gym.Env):
     A base class for all the environments
     """
     def __init__(self, max_steps: int, reward_function: RewardFunction,
-                 observation_featurizer: ObservationFeaturizer, return_obs_as_vector: bool = True):
+                 observation_featurizer: BaseObservationFeaturizer, return_obs_as_vector: bool = True):
         """
         Args:
             max_steps (int): max steps for each episode
@@ -32,14 +30,14 @@ class BaseEnv(gym.Env):
     # Standard gym methods
 
     @abstractmethod
-    def step(self, action: int) -> Tuple[Union[Observation, np.array], int, bool, dict]:
+    def step(self, action: int) -> Tuple[Union[BaseObservation, np.array], int, bool, dict]:
         """
         Takes a step with the given action and returns (next state, reward, done, info)
         """
         raise NotImplementedError
 
     @abstractmethod
-    def reset(self, sample: Sample = None) -> Union[Observation, np.array]:
+    def reset(self, sample: Sample = None) -> Union[BaseObservation, np.array]:
         """
         Resets the episode and returns an observation
         """
@@ -63,12 +61,6 @@ class BaseEnv(gym.Env):
         Gets the observation dimension
         """
         return self.observation_featurizer.get_observation_dim()
-
-    def get_input_dim(self) -> int:
-        """
-        Gets the dimension of input component of the observation
-        """
-        return self.observation_featurizer.get_input_dim()
 
     def get_action_space(self) -> ActionSpace:
         """
@@ -97,25 +89,14 @@ class BaseEnv(gym.Env):
         """
         raise NotImplementedError
 
-    # For imitation learning, to get offline dataset of states and actions
-
-    def get_offline_states_actions(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Returns offline states and targets for action
-
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor]: [description]
-        """
-        raise NotImplementedError
-
-    def set_featurizer(self, observation_featurizer: ObservationFeaturizer):
+    def set_featurizer(self, observation_featurizer: BaseObservationFeaturizer):
         """
         Sets the observation featurizer (can also change during run time)
         """
         self.observation_featurizer = observation_featurizer
         self._set_spaces(observation_featurizer)
 
-    def _set_spaces(self, observation_featurizer: ObservationFeaturizer):
+    def _set_spaces(self, observation_featurizer: BaseObservationFeaturizer):
         low = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=-float('inf'), dtype=np.float32)
         high = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=float('inf'), dtype=np.float32)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)

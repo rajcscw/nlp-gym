@@ -5,11 +5,6 @@ from flair.embeddings import DocumentPoolEmbeddings, WordEmbeddings, Embeddings,
 from flair.data import Sentence
 from typing import List
 
-"""
-TODO: Refactor to have same type of things; like input and context
-"""
-
-
 @dataclass(init=True)
 class Observation:
     question: str
@@ -37,7 +32,7 @@ class ObservationFeaturizer(ABC):
         raise NotImplementedError
 
 
-class DefaultSimpleFeaturizerForQA(ObservationFeaturizer):
+class InformedFeaturizer(ObservationFeaturizer):
     def __init__(self, device: str = "cpu"):
         self.device = device
         self._setup_device()
@@ -71,7 +66,7 @@ class DefaultSimpleFeaturizerForQA(ObservationFeaturizer):
         return 2
 
 
-class DefaultFeaturizerForQA(ObservationFeaturizer):
+class SimpleFeaturizer(ObservationFeaturizer):
     def __init__(self, doc_embeddings: Embeddings = DocumentPoolEmbeddings([WordEmbeddings("en")]), device: str = "cpu"):
         self.device = device
         self._setup_device()
@@ -99,11 +94,6 @@ class DefaultFeaturizerForQA(ObservationFeaturizer):
             embedding = torch.tensor(sent[0].embedding.cpu().detach().numpy()).reshape(1, -1)
         sent.clear_embeddings()
         return embedding
-
-    def _get_sim(self, fact: str, choice_text: str):
-        sim = torch.nn.CosineSimilarity(dim=1)(self._get_sentence_embedding(fact),
-                                               self._get_sentence_embedding(choice_text))
-        return sim
 
     def featurize(self, question: str, facts: List[str], choice: str) -> torch.Tensor:
         question_embedding = self._get_sentence_embedding(question)

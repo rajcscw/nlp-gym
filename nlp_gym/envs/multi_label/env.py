@@ -8,13 +8,12 @@ from rich import print
 
 from nlp_gym.core_components.sampler import PrioritySampler
 from nlp_gym.data_pools.base import Sample
-from nlp_gym.envs.action.action_space import ActionSpace
-from nlp_gym.envs.base_env import BaseEnv
-from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
-from nlp_gym.envs.observation.multi_label import DefaultFeaturizerForMultiLabelRank
-from nlp_gym.envs.observation.observation import Observation
-from nlp_gym.envs.reward.base import RewardFunction
-from nlp_gym.envs.reward.multi_label import F1RewardFunction
+from nlp_gym.envs.common.action_space import ActionSpace
+from nlp_gym.envs.common.base_env import BaseEnv
+from nlp_gym.envs.common.reward import RewardFunction
+from nlp_gym.envs.multi_label.featurizer import DefaultFeaturizerForMultiLabelRank
+from nlp_gym.envs.multi_label.observation import ObservationFeaturizer, Observation
+from nlp_gym.envs.multi_label.reward import F1RewardFunction
 
 
 @dataclass(init=True)
@@ -78,9 +77,7 @@ class MultiLabelEnv(BaseEnv):
         self.time_step += 1
 
         # get the updated observation
-        updated_observation = self.current_sample.observation.get_updated_observation(None,
-                                                                                      action_str,
-                                                                                      self.observation_featurizer)
+        updated_observation = self.current_sample.observation.get_updated_observation(action_str, self.observation_featurizer)
 
         # update the current sample (just the observation)
         self.current_sample.observation = updated_observation
@@ -110,7 +107,7 @@ class MultiLabelEnv(BaseEnv):
         self.observation_featurizer.init_on_reset(sample.input_text)
 
         # get observation
-        observation = Observation.build(None, [], self.observation_featurizer)
+        observation = Observation.build(sample.input_text, [], self.observation_featurizer)
 
         # construct current data point
         self.current_sample = DataPoint(text=sample.input_text, label=sample.oracle_label,
@@ -135,31 +132,3 @@ class MultiLabelEnv(BaseEnv):
 
     def get_samples(self) -> List[Sample]:
         return self.sampler_for_replaying.get_all_samples()
-
-
-if __name__ == "__main__":
-    from sprl_package.data_pools.registry import DataPoolRegistry
-
-    # data pool
-    train_pool, val_pool, test_pool = DataPoolRegistry.get_pool_splits("AAPDPool")
-
-    # get env
-    env = MultiLabelEnv(train_pool.labels(), max_steps=3, priority_scale=0.3)
-    for sample, weight in train_pool:
-        if len(sample.input_text) < 200:
-            env.add_sample(sample, weight)
-
-    # env reset
-    observation = env.reset()
-
-    # play an episode
-    done = False
-    total_reward = 0
-    while not done:
-        env.render()
-        action = env.action_space.sample()
-        print(f"Action: {env.action_space.ix_to_action(action)}")
-        _, reward, done, _ = env.step(action)
-        total_reward += reward
-    print(f"Total reward: {total_reward}")
-    print(env.current_original_sample)

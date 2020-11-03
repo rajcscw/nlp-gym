@@ -9,10 +9,6 @@ from typing import List, Union, Tuple
 from dataclasses import dataclass
 from rich import print
 
-"""
-TODO: Refactor to use abstract types and not concrete ones
-"""
-
 
 @dataclass(init=True)
 class ObsTriplet:
@@ -52,33 +48,6 @@ class QAEnv(BaseEnv):
         # hold samples
         self.__samples: List[Sample] = []
 
-    def _reward_function(self, action: str, time_step: int):
-
-        def _get_reward_for_selection(action: str, time_step: int):
-            selected_choice = self.__observation_sequence[self.time_step].choice_id
-            reward = +20 if selected_choice == self.__current_target else -10
-            return reward
-
-        # if final step has been reached and no more observations to give
-        reward = None
-        if time_step == len(self.__observation_sequence) - 1:
-            if action == "CONTINUE":  # if the action is CONTINUE, then punish
-                reward = -10
-            else:  # if the action is ANSWER, then reward
-                reward = _get_reward_for_selection(action, time_step)
-
-        # if the action is ANSWER
-        if action == "ANSWER":
-            # if the choice is correct, then reward otherwise punish
-            reward = _get_reward_for_selection(action, time_step)
-        else:
-            # if the action is CONTINUE and the correct choice is skipped,then punish
-            # otherwise, if an incorrect choice is skipped, then reward
-            current_choice = self.__observation_sequence[self.time_step].choice_id
-            reward = -10 if current_choice == self.__current_target else +5
-
-        return reward
-
     def _is_terminal(self, action: str, time_step: int):
         termimal = (action == "ANSWER") or (time_step == len(self.__observation_sequence) - 1)
         return termimal
@@ -86,12 +55,6 @@ class QAEnv(BaseEnv):
     def step(self, action: int) -> Tuple[Union[Observation, np.array], int, bool, dict]:
 
         action_str = self.action_space.ix_to_action(action)
-
-        # # get reward
-        # reward = self._reward_function(action_str, self.time_step)
-
-        # # done?
-        # done = self._is_terminal(action_str, self.time_step)
 
         # if current action is ANSWER or ran out of input, then check the current choice and produce terminal reward
         if action_str == "ANSWER" or self.time_step == len(self.__observation_sequence) - 1:
