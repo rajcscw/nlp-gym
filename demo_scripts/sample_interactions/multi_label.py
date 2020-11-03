@@ -1,6 +1,6 @@
 from nlp_gym.data_pools.custom_multi_label_pools import ReutersDataPool
-from nlp_gym.envs.multi_label_env import MultiLabelEnv
-from nlp_gym.envs.reward.multi_label import F1RewardFunction
+from nlp_gym.envs.multi_label.env import MultiLabelEnv
+from nlp_gym.envs.multi_label.reward import F1RewardFunction
 
 # data pool
 pool = ReutersDataPool.prepare(split="train")
