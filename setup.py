@@ -10,4 +10,5 @@ setup(name="nlp_gym",
                         "seaborn", "sklearn", "tqdm", "edit_distance", "rich",
                         "tensorflow==2.1.0",  "gym", "pytorch-nlp",
                         "tensorflow-datasets", "tfds-nightly",
-                        "datasets"])
+                        "datasets"],
+      tests_requires=["pytest"])
