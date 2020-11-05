@@ -1,17 +1,17 @@
-from nlp_gym.envs.base_env import BaseEnv
-from nlp_gym.envs.observation.observation import Observation
-from nlp_gym.data_pools.base import Sample
-from nlp_gym.envs.reward.base import RewardFunction
-from nlp_gym.envs.reward.seq_tagging import EntityF1Score
-from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
-from nlp_gym.envs.observation.seq_tagging import DefaultFeaturizerForSeqTagging
-from nlp_gym.core_components.sampler import PrioritySampler
-from nlp_gym.envs.action.action_space import ActionSpace
-from typing import Tuple, List, Union
-from dataclasses import dataclass
 import copy
+from dataclasses import dataclass
+from typing import List, Tuple, Union
+
 import numpy as np
 from flair.data import Sentence
+from nlp_gym.core_components.sampler import PrioritySampler
+from nlp_gym.data_pools.base import Sample
+from nlp_gym.envs.common.action_space import ActionSpace
+from nlp_gym.envs.common.base_env import BaseEnv
+from nlp_gym.envs.seq_tagging.observation import ObservationFeaturizer, Observation
+from nlp_gym.envs.seq_tagging.featurizer import DefaultFeaturizerForSeqTagging
+from nlp_gym.envs.common.reward import RewardFunction
+from nlp_gym.envs.seq_tagging.reward import EntityF1Score
 from rich import print
 
 
@@ -76,6 +76,7 @@ class SeqTagEnv(BaseEnv):
         # get the updated observation
         if not done:
             updated_observation = self.current_sample.observation.get_updated_observation(self.time_step,
+                                                                                          self.current_sample.text[self.time_step],
                                                                                           action_str,
                                                                                           self.observation_featurizer)
 
@@ -117,7 +118,8 @@ class SeqTagEnv(BaseEnv):
         self.observation_featurizer.init_on_reset(self.current_original_sample.input_text)
 
         # get initial observation
-        observation = Observation.build(self.time_step, [], self.observation_featurizer)
+        observation = Observation.build(self.time_step, input_text_tokens[self.time_step],
+                                        [], self.observation_featurizer)
 
         # construct current data point
         self.current_sample = DataPoint(text=input_text_tokens, label=sample.oracle_label,
@@ -147,25 +149,3 @@ class SeqTagEnv(BaseEnv):
 
     def get_samples(self) -> List[Sample]:
         return self.sampler_for_replaying.get_all_samples()
-
-
-if __name__ == "__main__":
-    from sprl_package.data_pools.custom_seq_tagging_pools import CONLLNerTaggingPool
-
-    train_pool = CONLLNerTaggingPool.prepare("train")
-
-    env = SeqTagEnv(train_pool.labels(), return_obs_as_vector=False)
-    for sample, weight in train_pool:
-        if len(sample.oracle_label) < 10:
-            env.add_sample(sample)
-
-    env.reset()
-    done = False
-    total_reward = 0
-    while not done:
-        action = env.action_space.sample()
-        obs, reward, done, info = env.step(action)
-        env.render()
-        total_reward += reward
-    print(f"Total Reward: "+str(total_reward))
-    print(env.current_sample)

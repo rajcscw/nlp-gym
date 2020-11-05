@@ -4,8 +4,8 @@ import torch
 from flair.data import Sentence
 from flair.embeddings import BytePairEmbeddings, FlairEmbeddings, StackedEmbeddings, Embeddings, WordEmbeddings
 
-from nlp_gym.envs.action.action_space import ActionSpace
-from nlp_gym.envs.observation.base_featurizer import ObservationFeaturizer
+from nlp_gym.envs.common.action_space import ActionSpace
+from nlp_gym.envs.seq_tagging.observation import ObservationFeaturizer, Observation
 
 
 class EmbeddingRegistry:
@@ -42,11 +42,20 @@ class DefaultFeaturizerForSeqTagging(ObservationFeaturizer):
         self._current_token_embeddings = [token.embedding.cpu().detach() for token in sent]
         sent.clear_embeddings()
 
-    def featurize_input_on_step(self, input_index: int) -> torch.Tensor:
+    def featurize(self, observation: Observation) -> torch.Tensor:
+        input_vector = self._featurize_input(observation.get_current_index())
+        context_vector = self._featurize_context(observation.get_current_action_history())
+        concatenated = torch.cat((input_vector, context_vector), dim=0)
+        return concatenated
+
+    def get_observation_dim(self) -> int:
+        return self._get_input_dim() + self._get_context_dim()
+
+    def _featurize_input(self, input_index: int) -> torch.Tensor:
         input_features = self._current_token_embeddings[input_index]
         return input_features
 
-    def featurize_context_on_step(self, context: List[str]) -> torch.Tensor:
+    def _featurize_context(self, context: List[str]) -> torch.Tensor:
         # consider only last action
         context_vector = torch.zeros(self.action_space.size())
         context_ = [context[-1]] if len(context) > 0 else []
@@ -54,12 +63,12 @@ class DefaultFeaturizerForSeqTagging(ObservationFeaturizer):
         context_vector[action_indices] = 1.0
         return context_vector
 
-    def get_input_dim(self):
+    def _get_input_dim(self):
         sent = Sentence("A random text to get the embedding dimension")
         self.doc_embeddings.embed(sent)
         dim = sent[0].embedding.shape[0]
         sent.clear_embeddings()
         return dim
 
-    def get_context_dim(self):
+    def _get_context_dim(self):
         return self.action_space.size()

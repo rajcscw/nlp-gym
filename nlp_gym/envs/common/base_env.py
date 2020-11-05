@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Tuple, List, Union
 from nlp_gym.envs.common.observation import BaseObservation, BaseObservationFeaturizer
-from nlp_gym.envs.reward.base import RewardFunction
+from nlp_gym.envs.common.reward import RewardFunction
 from nlp_gym.data_pools.base import Sample
 from nlp_gym.envs.common.action_space import ActionSpace
 from gym import spaces

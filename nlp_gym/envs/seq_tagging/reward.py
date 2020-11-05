@@ -1,4 +1,4 @@
-from nlp_gym.envs.observation.observation import Observation
+from nlp_gym.envs.common.observation import BaseObservation
 from nlp_gym.metrics.seq_tag import EntityScores
 from nlp_gym.envs.reward.base import RewardFunction
 from typing import List
@@ -30,7 +30,7 @@ class EntityF1Score(RewardFunction):
         reward = current_score - previous_score
         return reward
 
-    def __call__(self, observation: Observation, action: str, targets: List[str]) -> float:
+    def __call__(self, observation: BaseObservation, action: str, targets: List[str]) -> float:
         # get previous and current actions
         prev_action_history = observation.get_current_action_history()
         current_action_history = copy.deepcopy(observation.get_current_action_history())

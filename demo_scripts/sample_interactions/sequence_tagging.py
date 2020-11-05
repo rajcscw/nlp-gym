@@ -1,6 +1,6 @@
 from nlp_gym.data_pools.custom_seq_tagging_pools import UDPosTagggingPool
-from nlp_gym.envs.seq_tag_env import SeqTagEnv
-from nlp_gym.envs.reward.seq_tagging import EntityF1Score
+from nlp_gym.envs.seq_tagging.env import SeqTagEnv
+from nlp_gym.envs.seq_tagging.reward import EntityF1Score
 
 # data pool
 pool = UDPosTagggingPool.prepare("train")
@@ -19,8 +19,8 @@ done = False
 state = env.reset()
 total_reward = 0
 while not done:
-    env.render()
     action = env.action_space.sample()
     state, reward, done, info = env.step(action)
     total_reward += reward
+    env.render()
 print(f"Episodic reward {total_reward}")

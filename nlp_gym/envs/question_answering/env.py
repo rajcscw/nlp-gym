@@ -1,12 +1,16 @@
-from nlp_gym.envs.base_env import BaseEnv
-from nlp_gym.envs.observation.question_answering import ObservationFeaturizer, DefaultFeaturizerForQA, Observation
-from nlp_gym.envs.action.action_space import ActionSpace
-from nlp_gym.data_pools.question_answering_pool import Sample
-
-from gym import spaces
-import numpy as np
-from typing import List, Union, Tuple
 from dataclasses import dataclass
+from typing import List, Tuple, Union
+
+import numpy as np
+from gym import spaces
+from nlp_gym.data_pools.question_answering_pool import Sample
+from nlp_gym.envs.common.base_env import BaseEnv
+from nlp_gym.envs.common.action_space import ActionSpace
+from nlp_gym.envs.common.reward import RewardFunction
+from nlp_gym.envs.question_answering.featurizer import InformedFeaturizer
+from nlp_gym.envs.question_answering.observation import (Observation,
+                                                         ObservationFeaturizer)
+from nlp_gym.envs.question_answering.reward import BinaryRewardFunction
 from rich import print
 
 
@@ -29,14 +33,16 @@ class QAEnv(BaseEnv):
     CONTINUE correponds to agent asking for the next choice
 
     """
-    def __init__(self, observation_featurizer: ObservationFeaturizer = None, return_obs_as_vector: bool = True):
+    def __init__(self, observation_featurizer: ObservationFeaturizer = None, reward_function: RewardFunction = None,
+                 return_obs_as_vector: bool = True):
         # set action and observation spaces
         self.action_space = ActionSpace(actions=["ANSWER", "CONTINUE"])
-        observation_featurizer = DefaultFeaturizerForQA.from_fasttext() if observation_featurizer is None else observation_featurizer
+        observation_featurizer = InformedFeaturizer() if observation_featurizer is None else observation_featurizer
+        reward_function = BinaryRewardFunction() if reward_function is None else reward_function
         low = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=-float('inf'), dtype=np.float32)
         high = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=float('inf'), dtype=np.float32)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
-        super().__init__(None, None, observation_featurizer, return_obs_as_vector)
+        super().__init__(None, reward_function, observation_featurizer, return_obs_as_vector)
 
         # set the counter
         self.time_step = None
@@ -44,6 +50,7 @@ class QAEnv(BaseEnv):
         # observation time line
         self.__observation_sequence = None
         self.__current_target = None
+        self.__current_observation = None
 
         # hold samples
         self.__samples: List[Sample] = []
@@ -54,16 +61,14 @@ class QAEnv(BaseEnv):
 
     def step(self, action: int) -> Tuple[Union[Observation, np.array], int, bool, dict]:
 
+        # current action
         action_str = self.action_space.ix_to_action(action)
 
-        # if current action is ANSWER or ran out of input, then check the current choice and produce terminal reward
-        if action_str == "ANSWER" or self.time_step == len(self.__observation_sequence) - 1:
-            selected_choice = self.__observation_sequence[self.time_step].choice_id
-            reward = 1.0 if selected_choice == self.__current_target else 0.0
-            done = True
-        else:  # Just continue with zero reward
-            reward = 0.0
-            done = False
+        # get reward
+        reward = self.reward_function(self.__current_observation, action_str, self.__current_target)
+
+        # terminal or not
+        done = self._is_terminal(action_str, self.time_step)
 
         # if not done
         if not done:
@@ -76,10 +81,11 @@ class QAEnv(BaseEnv):
         # current observation
         observation_at_t = self.__observation_sequence[self.time_step]
         observation = Observation.build(observation_at_t.question, observation_at_t.facts,
-                                        observation_at_t.choice_text, self.observation_featurizer)
-
+                                        observation_at_t.choice_text, observation_at_t.choice_id,
+                                        self.time_step, len(self.__observation_sequence),
+                                        self.observation_featurizer)
+        self.__current_observation = observation
         observation_to_return = observation.get_vector().numpy() if self.return_obs_as_vector else observation
-
         return observation_to_return, reward, done, info
 
     def reset(self, sample: Sample = None) -> Union[Observation, np.array]:
@@ -99,10 +105,11 @@ class QAEnv(BaseEnv):
         # current observation
         observation_at_t = self.__observation_sequence[self.time_step]
         observation = Observation.build(observation_at_t.question, observation_at_t.facts,
-                                        observation_at_t.choice_text, self.observation_featurizer)
-
+                                        observation_at_t.choice_text, observation_at_t.choice_id,
+                                        self.time_step, len(self.__observation_sequence),
+                                        self.observation_featurizer)
+        self.__current_observation = observation
         observation_to_return = observation.get_vector().numpy() if self.return_obs_as_vector else observation
-
         return observation_to_return
 
     @staticmethod
@@ -131,31 +138,3 @@ class QAEnv(BaseEnv):
 
     def get_samples(self) -> List[Sample]:
         return self.__samples
-
-
-if __name__ == "__main__":
-    from sprl_package.data_pools.custom_question_answering_pools import AIRC
-
-    # data
-    data_pool = AIRC.prepare(split="train")
-
-    # env
-    env = QAEnv(return_obs_as_vector=False)
-
-    # add samples to env
-    for sample, _ in data_pool:
-        env.add_sample(sample)
-
-    # env reset
-    observation = env.reset()
-
-    # play an episode
-    done = False
-    total_reward = 0
-    while not done:
-        env.render()
-        action = env.action_space.sample()
-        print(f"Action: {env.action_space.ix_to_action(action)}")
-        _, reward, done, _ = env.step(action)
-        total_reward += reward
-    print(f"Total reward: {total_reward}")
