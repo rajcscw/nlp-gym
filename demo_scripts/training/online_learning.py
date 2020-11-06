@@ -1,11 +1,12 @@
 
-from nlp_gym.envs.seq_tag_env import SeqTagEnv
+from nlp_gym.envs.seq_tagging.env import SeqTagEnv
 from nlp_gym.data_pools.custom_seq_tagging_pools import UDPosTagggingPool
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines import PPO1
-from nlp_gym.envs.reward.seq_tagging import EntityF1Score
-from nlp_gym.envs.observation.seq_tagging import DefaultFeaturizerForSeqTagging
+from nlp_gym.envs.seq_tagging.reward import EntityF1Score
+from nlp_gym.envs.seq_tagging.featurizer import DefaultFeaturizerForSeqTagging
 from nlp_gym.metrics.seq_tag import EntityScores
+import tqdm
 
 
 def predict(model, sample):
@@ -33,11 +34,12 @@ feat = DefaultFeaturizerForSeqTagging(env.action_space, embedding_type="fasttext
 env.set_featurizer(feat)
 
 # PPO model
-model = PPO1(MlpPolicy, env, verbose=1)
+model = PPO1(MlpPolicy, env, verbose=0)
 
 
 # train loop that goes over each sample only once
-for sample, _ in data_pool:
+running_match_score = 0
+for ix, (sample, _) in enumerate(tqdm.tqdm(data_pool)):
 
     # run the sample through the model and get predicted label
     predicted_label = predict(model, sample)
@@ -50,7 +52,8 @@ for sample, _ in data_pool:
     annotated_label = sample.oracle_label
 
     # match score
-    match_ratio = EntityScores()(annotated_label, predicted_label)
+    match_ratio = EntityScores()(annotated_label, predicted_label)["f1"]
+    running_match_score += match_ratio
 
     # add the new sample to the environment
     sample.oracle_label = annotated_label
@@ -58,3 +61,7 @@ for sample, _ in data_pool:
 
     # train agent for few epochs
     model.learn(total_timesteps=1e+2)
+
+    if (ix+1) % 50 == 0:
+        print(f"Running match score {running_match_score/50}")
+        running_match_score = 0.0

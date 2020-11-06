@@ -1,10 +1,8 @@
-from nlp_gym.data_pools.custom_multi_label_pools import AAPDDataPool
-from nlp_gym.envs.multi_label_env import MultiLabelEnv
-from nlp_gym.envs.reward.multi_label import F1RewardFunction
-from stable_baselines.common.policies import MlpPolicy
+from nlp_gym.data_pools.custom_seq_tagging_pools import UDPosTagggingPool
+from nlp_gym.envs.seq_tagging.env import SeqTagEnv
+from nlp_gym.envs.seq_tagging.reward import EntityF1Score
 from stable_baselines.deepq.policies import MlpPolicy as DQNPolicy
 from stable_baselines import DQN
-from stable_baselines import PPO1
 from stable_baselines.common.env_checker import check_env
 from rich import print
 
@@ -28,24 +26,24 @@ def eval_model(model, env):
 
 
 # data pool
-pool = AAPDDataPool.prepare()
-labels = pool.labels()
+data_pool = UDPosTagggingPool.prepare(split="train")
 
 # reward function
-reward_fn = F1RewardFunction()
+reward_fn = EntityF1Score(dense=True, average="micro")
 
-# multi label env
-env = MultiLabelEnv(possible_labels=labels, max_steps=10, reward_function=reward_fn,
-                    return_obs_as_vector=True)
-for sample, weight in pool:
+# seq tag env
+env = SeqTagEnv(data_pool.labels(), reward_function=reward_fn)
+for sample, weight in data_pool:
     env.add_sample(sample, weight)
 
 # check the environment
 check_env(env, warn=True)
 
 # train a MLP Policy
-#model = PPO1(MlpPolicy, env, verbose=1)
-model = DQN(DQNPolicy, env, verbose=1)
+model = DQN(env=env, policy=DQNPolicy, gamma=0.99, batch_size=32, learning_rate=5e-4,
+            double_q=True, exploration_fraction=0.1,
+            prioritized_replay=False, policy_kwargs={"layers": [100, 100]},
+            verbose=1)
 for i in range(int(1e+3)):
     model.learn(total_timesteps=int(1e+3), reset_num_timesteps=False)
     eval_model(model, env)
