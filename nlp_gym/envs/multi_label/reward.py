@@ -1,5 +1,5 @@
 from nlp_gym.envs.common.observation import BaseObservation
-from nlp_gym.envs.reward.base import RewardFunction
+from nlp_gym.envs.common.reward import RewardFunction
 from nlp_gym.metrics.multi_label import F1Score
 from typing import List
 import copy

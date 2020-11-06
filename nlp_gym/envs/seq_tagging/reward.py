@@ -1,6 +1,6 @@
 from nlp_gym.envs.common.observation import BaseObservation
 from nlp_gym.metrics.seq_tag import EntityScores
-from nlp_gym.envs.reward.base import RewardFunction
+from nlp_gym.envs.common.reward import RewardFunction
 from typing import List
 import copy
 

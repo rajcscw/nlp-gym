@@ -10,12 +10,9 @@ from nlp_gym.envs.seq_tagging.observation import ObservationFeaturizer, Observat
 
 class EmbeddingRegistry:
     _registry_mapping = {
-        "flair_uni": [FlairEmbeddings("news-forward")],
-        "flair_bi": [FlairEmbeddings("news-forward"), FlairEmbeddings("news-backward")],
         "byte_pair": [BytePairEmbeddings("en")],
         "fasttext": [WordEmbeddings("en-crawl")],
         "fasttext_de": [WordEmbeddings('de-crawl')],
-        "stacked_word": [WordEmbeddings("en-crawl"), BytePairEmbeddings("en")]
     }
 
     @staticmethod
@@ -24,7 +21,7 @@ class EmbeddingRegistry:
 
 
 class DefaultFeaturizerForSeqTagging(ObservationFeaturizer):
-    def __init__(self, action_space: ActionSpace, embedding_type: str = "byte_pair", device: str = "cpu"):
+    def __init__(self, action_space: ActionSpace, embedding_type: str = "fasttext", device: str = "cpu"):
         self.device = device
         self._setup_device()
         embeddings = EmbeddingRegistry.get_embedding(embedding_type)

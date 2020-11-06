@@ -58,7 +58,7 @@ class EmbeddingRegistry:
 
 
 class DefaultFeaturizerForMultiLabelRank(ObservationFeaturizer):
-    def __init__(self, action_space: ActionSpace, embedding_type: str = "byte_pair", pre_process: bool = False,
+    def __init__(self, action_space: ActionSpace, embedding_type: str = "fasttext", pre_process: bool = False,
                  device: str = "cpu"):
         self.device = device
         self.pre_process = pre_process
