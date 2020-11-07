@@ -7,6 +7,8 @@ The  toolkit provides interactive environments for standard NLP tasks such as se
 Furthermore, the toolkit is designed in a modular fashion providing flexibility for users to extend tasks with their custom data sets, observations, and reward functions.
 
 
+This work will be presented at [Wordplay: When Language Meets Games @ NeurIPS 2020](https://wordplay-workshop.github.io/)
+
 ## Install
 ```
 git clone https://github.com/rajcscw/nlp-gym.git
