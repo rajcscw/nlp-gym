@@ -1,6 +1,5 @@
 from nlp_gym.data_pools.question_answering_pool import QADataPool, Sample
-import tensorflow_datasets as tfds
-import tensorflow as tf
+from datasets import load_dataset
 import wget
 import zipfile
 import os
@@ -17,18 +16,17 @@ class QASC(QADataPool):
         if split == "val":
             split = "validation"
 
-        tf.enable_eager_execution()
-        ds = tfds.load('qasc', split=split, shuffle_files=True)
+        ds = load_dataset("qasc")[split]
 
         samples = []
         for datapoint in ds:
-            sample_id = datapoint["id"].numpy().decode("utf-8")
-            facts = [datapoint["fact1"].numpy().decode("utf-8"), datapoint["fact2"].numpy().decode("utf-8")]
-            question = datapoint["question"].numpy().decode("utf-8")
-            choices = {label.decode("utf-8"): text.decode("utf-8")
-                       for label, text in zip(datapoint["choices"]["label"].numpy(),
-                                              datapoint["choices"]["text"].numpy())}
-            answer = datapoint["answerKey"].numpy().decode("utf-8")
+            sample_id = datapoint["id"]
+            facts = [datapoint["fact1"], datapoint["fact2"]]
+            question = datapoint["question"]
+            choices = {label: text
+                       for label, text in zip(datapoint["choices"]["label"],
+                                              datapoint["choices"]["text"])}
+            answer = datapoint["answerKey"]
             sample = Sample(sample_id, question, facts, choices, answer)
             samples.append(sample)
 
@@ -90,3 +88,4 @@ class AIRC(QADataPool):
                 samples.append(sample)
 
         return AIRC(samples)
+

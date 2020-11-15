@@ -1,4 +1,4 @@
-from nlp_gym.data_pools.custom_question_answering_pools import AIRC
+from nlp_gym.data_pools.custom_question_answering_pools import QASC
 from nlp_gym.envs.question_answering.env import QAEnv
 from nlp_gym.envs.question_answering.featurizer import InformedFeaturizer, SimpleFeaturizer
 from stable_baselines.deepq.policies import MlpPolicy as DQNPolicy
@@ -24,11 +24,11 @@ def eval_model(env, model, pool):
 
 
 # data pool
-data_pool = AIRC.prepare(split="train", dataset_id=AIRC.EASY)
-val_pool = AIRC.prepare(split="val", dataset_id=AIRC.EASY)
+data_pool = QASC.prepare(split="train")
+val_pool = QASC.prepare(split="val")
 
 # featurizer
-featurizer = SimpleFeaturizer()
+featurizer = InformedFeaturizer()
 
 # seq tag env
 env = QAEnv(observation_featurizer=featurizer)
