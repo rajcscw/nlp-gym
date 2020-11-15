@@ -35,13 +35,16 @@ class QAEnv(BaseEnv):
     """
     def __init__(self, observation_featurizer: ObservationFeaturizer = None, reward_function: RewardFunction = None,
                  return_obs_as_vector: bool = True):
-        # set action and observation spaces
+        # set action spaces
         self.action_space = ActionSpace(actions=["ANSWER", "CONTINUE"])
-        observation_featurizer = InformedFeaturizer() if observation_featurizer is None else observation_featurizer
+
+        # set observation spaces
+        if return_obs_as_vector:
+            observation_featurizer = InformedFeaturizer() if observation_featurizer is None else observation_featurizer
+        else:
+            observation_featurizer = None
+
         reward_function = BinaryRewardFunction() if reward_function is None else reward_function
-        low = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=-float('inf'), dtype=np.float32)
-        high = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=float('inf'), dtype=np.float32)
-        self.observation_space = spaces.Box(low, high, dtype=np.float32)
         super().__init__(None, reward_function, observation_featurizer, return_obs_as_vector)
 
         # set the counter
@@ -93,6 +96,10 @@ class QAEnv(BaseEnv):
         # get a QA sample
         if sample is None:
             sample = np.random.choice(self.__samples)
+
+        # init on reset
+        if self.observation_featurizer is not None:
+            self.observation_featurizer.init_on_reset(sample.question, sample.facts)
 
         # create the observation sequence
         self.__observation_sequence = QAEnv._create_sequence(sample)
