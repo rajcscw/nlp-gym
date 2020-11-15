@@ -39,9 +39,10 @@ class Observation(BaseObservation):
     @classmethod
     def build(cls, question: str, facts: List[str], choice: str, choice_id: str,
               time_step: int, total_steps: int,
-              observation_featurizer: 'ObservationFeaturizer') -> 'Observation':
+              observation_featurizer: 'ObservationFeaturizer', featurize: bool) -> 'Observation':
         observation = Observation(question, facts, choice, choice_id, time_step, total_steps)
-        observation.input_embedding = observation_featurizer.featurize(observation)
+        if featurize:
+            observation.input_embedding = observation_featurizer.featurize(observation)
         return observation
 
 

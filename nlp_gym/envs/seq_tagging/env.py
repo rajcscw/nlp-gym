@@ -78,7 +78,8 @@ class SeqTagEnv(BaseEnv):
             updated_observation = self.current_sample.observation.get_updated_observation(self.time_step,
                                                                                           self.current_sample.text[self.time_step],
                                                                                           action_str,
-                                                                                          self.observation_featurizer)
+                                                                                          self.observation_featurizer,
+                                                                                          self.return_obs_as_vector)
 
             # update the current sample (just the observation)
             self.current_sample.observation = updated_observation
@@ -119,7 +120,7 @@ class SeqTagEnv(BaseEnv):
 
         # get initial observation
         observation = Observation.build(self.time_step, input_text_tokens[self.time_step],
-                                        [], self.observation_featurizer)
+                                        [], self.observation_featurizer, self.return_obs_as_vector)
 
         # construct current data point
         self.current_sample = DataPoint(text=input_text_tokens, label=sample.oracle_label,

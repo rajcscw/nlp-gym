@@ -34,14 +34,18 @@ class Observation(BaseObservation):
 
     @classmethod
     def build(cls, input_str: str, action_history: List[str],
-              observation_featurizer: ObservationFeaturizer) -> 'Observation':
+              observation_featurizer: ObservationFeaturizer,
+              featurize: bool) -> 'Observation':
         observation = Observation(input_str, action_history)
-        observation.current_vector = observation_featurizer.featurize(observation)
-        assert observation.get_vector().shape[0] == observation_featurizer.get_observation_dim()
+        if featurize:
+            observation.current_vector = observation_featurizer.featurize(observation)
+            assert observation.get_vector().shape[0] == observation_featurizer.get_observation_dim()
         return observation
 
-    def get_updated_observation(self, action: str, observation_featurizer: ObservationFeaturizer) -> 'Observation':
+    def get_updated_observation(self, action: str, observation_featurizer: ObservationFeaturizer,
+                                featurize: bool) -> 'Observation':
         updated_action_history = copy.deepcopy(self.current_action_history)
         updated_action_history.append(action)
-        updated_observation = Observation.build(self.current_input_str, updated_action_history, observation_featurizer)
+        updated_observation = Observation.build(self.current_input_str, updated_action_history,
+                                                observation_featurizer, featurize)
         return updated_observation

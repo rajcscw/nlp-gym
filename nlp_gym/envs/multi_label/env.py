@@ -77,7 +77,7 @@ class MultiLabelEnv(BaseEnv):
         self.time_step += 1
 
         # get the updated observation
-        updated_observation = self.current_sample.observation.get_updated_observation(action_str, self.observation_featurizer)
+        updated_observation = self.current_sample.observation.get_updated_observation(action_str, self.observation_featurizer, self.return_obs_as_vector)
 
         # update the current sample (just the observation)
         self.current_sample.observation = updated_observation
@@ -107,7 +107,7 @@ class MultiLabelEnv(BaseEnv):
         self.observation_featurizer.init_on_reset(sample.input_text)
 
         # get observation
-        observation = Observation.build(sample.input_text, [], self.observation_featurizer)
+        observation = Observation.build(sample.input_text, [], self.observation_featurizer, self.return_obs_as_vector)
 
         # construct current data point
         self.current_sample = DataPoint(text=sample.input_text, label=sample.oracle_label,

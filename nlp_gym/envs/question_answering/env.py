@@ -83,7 +83,8 @@ class QAEnv(BaseEnv):
         observation = Observation.build(observation_at_t.question, observation_at_t.facts,
                                         observation_at_t.choice_text, observation_at_t.choice_id,
                                         self.time_step, len(self.__observation_sequence),
-                                        self.observation_featurizer)
+                                        self.observation_featurizer,
+                                        self.return_obs_as_vector)
         self.__current_observation = observation
         observation_to_return = observation.get_vector().numpy() if self.return_obs_as_vector else observation
         return observation_to_return, reward, done, info
@@ -107,7 +108,8 @@ class QAEnv(BaseEnv):
         observation = Observation.build(observation_at_t.question, observation_at_t.facts,
                                         observation_at_t.choice_text, observation_at_t.choice_id,
                                         self.time_step, len(self.__observation_sequence),
-                                        self.observation_featurizer)
+                                        self.observation_featurizer, 
+                                        self.return_obs_as_vector)
         self.__current_observation = observation
         observation_to_return = observation.get_vector().numpy() if self.return_obs_as_vector else observation
         return observation_to_return
