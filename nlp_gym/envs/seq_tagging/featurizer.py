@@ -30,9 +30,11 @@ class EmbeddingRegistry:
         }
     }
 
-    @staticmethod
     def get_embedding(embedding_type: str) -> List[Embeddings]:
-        return EmbeddingRegistry._registry_mapping[embedding_type]
+        cls_ = EmbeddingRegistry._registry_mapping[embedding_type]["cls"]
+        params_ = EmbeddingRegistry._registry_mapping[embedding_type]["params"]
+        embeddings = [embedding_cls(embedding_param) for embedding_cls, embedding_param in zip(cls_, params_)]
+        return embeddings
 
 
 class DefaultFeaturizerForSeqTagging(ObservationFeaturizer):
