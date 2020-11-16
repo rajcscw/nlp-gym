@@ -44,11 +44,11 @@ class InformedFeaturizer(ObservationFeaturizer):
 
 
 class SimpleFeaturizer(ObservationFeaturizer):
-    def __init__(self, doc_embeddings: Embeddings = DocumentPoolEmbeddings([WordEmbeddings("en")]),
+    def __init__(self, doc_embeddings: Embeddings = None,
                  device: str = "cpu"):
         self.device = device
         self._setup_device()
-        self.doc_embeddings = doc_embeddings
+        self.doc_embeddings = doc_embeddings if doc_embeddings else DocumentPoolEmbeddings([WordEmbeddings("en")])
 
     @classmethod
     def from_fasttext(cls) -> 'SimpleFeaturizer':

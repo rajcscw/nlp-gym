@@ -2,7 +2,7 @@ from typing import List, Union
 
 import torch
 from flair.data import Sentence
-from flair.embeddings import BytePairEmbeddings, FlairEmbeddings, StackedEmbeddings, Embeddings, WordEmbeddings
+from flair.embeddings import BytePairEmbeddings, StackedEmbeddings, Embeddings, WordEmbeddings
 
 from nlp_gym.envs.common.action_space import ActionSpace
 from nlp_gym.envs.seq_tagging.observation import ObservationFeaturizer, Observation
@@ -13,6 +13,21 @@ class EmbeddingRegistry:
         "byte_pair": [BytePairEmbeddings("en")],
         "fasttext": [WordEmbeddings("en-crawl")],
         "fasttext_de": [WordEmbeddings('de-crawl')],
+    }
+
+    _registry_mapping = {
+        "byte_pair": {
+            "cls": [BytePairEmbeddings],
+            "params": ["en"]
+        },
+        "fasttext": {
+            "cls": [WordEmbeddings],
+            "params": ["en-crawl"]
+        },
+        "fasttext_de": {
+            "cls": [WordEmbeddings],
+            "params": ["de-crawl"]
+        }
     }
 
     @staticmethod

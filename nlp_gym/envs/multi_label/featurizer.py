@@ -47,14 +47,26 @@ class TextPreProcessor:
 
 class EmbeddingRegistry:
     _registry_mapping = {
-        "byte_pair": [BytePairEmbeddings("en")],
-        "fasttext": [WordEmbeddings("en-crawl")],
-        "stacked": [WordEmbeddings("en-crawl"), BytePairEmbeddings("en")]
+        "byte_pair": {
+            "cls": [BytePairEmbeddings],
+            "params": ["en"]
+        },
+        "fasttext": {
+            "cls": [WordEmbeddings],
+            "params": ["en-crawl"]
+        },
+        "stacked": {
+            "cls": [WordEmbeddings, BytePairEmbeddings],
+            "params": ["en-crawl", "en"]
+        }
     }
 
     @staticmethod
     def get_embedding(embedding_type: str) -> List[Embeddings]:
-        return EmbeddingRegistry._registry_mapping[embedding_type]
+        cls_ = EmbeddingRegistry._registry_mapping[embedding_type]["cls"]
+        params_ = EmbeddingRegistry._registry_mapping[embedding_type]["params"]
+        embeddings = [embedding_cls(embedding_param) for embedding_cls, embedding_param in zip(cls_, params_)]
+        return embeddings
 
 
 class DefaultFeaturizerForMultiLabelRank(ObservationFeaturizer):
@@ -108,3 +120,8 @@ class DefaultFeaturizerForMultiLabelRank(ObservationFeaturizer):
 
     def _get_context_dim(self):
         return self.action_space.size()
+
+
+if __name__ == "__main__":
+    embeddings = EmbeddingRegistry.get_embedding("stacked")
+    print(embeddings)
