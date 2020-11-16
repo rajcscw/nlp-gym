@@ -39,8 +39,11 @@ class SeqTagEnv(BaseEnv):
         reward_function = EntityF1Score(dense=True, average="micro") if reward_function is None else reward_function
 
         # set up default featurizer
-        observation_featurizer = DefaultFeaturizerForSeqTagging(self.action_space) if observation_featurizer is None \
-                                    else observation_featurizer
+        if return_obs_as_vector:
+            observation_featurizer = DefaultFeaturizerForSeqTagging(self.action_space) if observation_featurizer is None \
+                                        else observation_featurizer
+        else:
+            observation_featurizer = None
         super().__init__(None, reward_function, observation_featurizer, return_obs_as_vector)
 
         # set the counter
@@ -78,7 +81,8 @@ class SeqTagEnv(BaseEnv):
             updated_observation = self.current_sample.observation.get_updated_observation(self.time_step,
                                                                                           self.current_sample.text[self.time_step],
                                                                                           action_str,
-                                                                                          self.observation_featurizer)
+                                                                                          self.observation_featurizer,
+                                                                                          self.return_obs_as_vector)
 
             # update the current sample (just the observation)
             self.current_sample.observation = updated_observation
@@ -115,11 +119,12 @@ class SeqTagEnv(BaseEnv):
         self.time_step = 0
 
         # init the featurizer with the text
-        self.observation_featurizer.init_on_reset(self.current_original_sample.input_text)
+        if self.observation_featurizer is not None:
+            self.observation_featurizer.init_on_reset(self.current_original_sample.input_text)
 
         # get initial observation
         observation = Observation.build(self.time_step, input_text_tokens[self.time_step],
-                                        [], self.observation_featurizer)
+                                        [], self.observation_featurizer, self.return_obs_as_vector)
 
         # construct current data point
         self.current_sample = DataPoint(text=input_text_tokens, label=sample.oracle_label,

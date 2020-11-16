@@ -2,7 +2,7 @@ from typing import List, Union
 
 import torch
 from flair.data import Sentence
-from flair.embeddings import BytePairEmbeddings, FlairEmbeddings, StackedEmbeddings, Embeddings, WordEmbeddings
+from flair.embeddings import BytePairEmbeddings, StackedEmbeddings, Embeddings, WordEmbeddings
 
 from nlp_gym.envs.common.action_space import ActionSpace
 from nlp_gym.envs.seq_tagging.observation import ObservationFeaturizer, Observation
@@ -15,9 +15,26 @@ class EmbeddingRegistry:
         "fasttext_de": [WordEmbeddings('de-crawl')],
     }
 
-    @staticmethod
+    _registry_mapping = {
+        "byte_pair": {
+            "cls": [BytePairEmbeddings],
+            "params": ["en"]
+        },
+        "fasttext": {
+            "cls": [WordEmbeddings],
+            "params": ["en-crawl"]
+        },
+        "fasttext_de": {
+            "cls": [WordEmbeddings],
+            "params": ["de-crawl"]
+        }
+    }
+
     def get_embedding(embedding_type: str) -> List[Embeddings]:
-        return EmbeddingRegistry._registry_mapping[embedding_type]
+        cls_ = EmbeddingRegistry._registry_mapping[embedding_type]["cls"]
+        params_ = EmbeddingRegistry._registry_mapping[embedding_type]["params"]
+        embeddings = [embedding_cls(embedding_param) for embedding_cls, embedding_param in zip(cls_, params_)]
+        return embeddings
 
 
 class DefaultFeaturizerForSeqTagging(ObservationFeaturizer):

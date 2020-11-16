@@ -94,7 +94,8 @@ class BaseEnv(gym.Env):
         Sets the observation featurizer (can also change during run time)
         """
         self.observation_featurizer = observation_featurizer
-        self._set_spaces(observation_featurizer)
+        if observation_featurizer is not None:
+            self._set_spaces(observation_featurizer)
 
     def _set_spaces(self, observation_featurizer: BaseObservationFeaturizer):
         low = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=-float('inf'), dtype=np.float32)

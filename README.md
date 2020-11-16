@@ -1,4 +1,4 @@
-# NLPGym
+# NLPGym [![CircleCI](https://circleci.com/gh/rajcscw/nlp-gym/tree/main.svg?style=svg)](https://circleci.com/gh/rajcscw/nlp-gym/tree/main)
 
 NLPGym is a toolkit to bridge the gap between applications of RL and NLP. This aims at facilitating research and benchmarking of DRL application on natural language processing tasks. 
 

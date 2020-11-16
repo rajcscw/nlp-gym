@@ -39,13 +39,15 @@ class MultiLabelEnv(BaseEnv):
         # reward function
         reward_function = F1RewardFunction() if reward_function is None else reward_function
 
-        # set action and observation spaces
+        # set action spaces
         self.action_space = MultiLabelEnv._get_action_space(possible_labels)
-        observation_featurizer = DefaultFeaturizerForMultiLabelRank(self.action_space) if observation_featurizer is None \
-                                    else observation_featurizer
-        low = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=-float('inf'), dtype=np.float32)
-        high = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=float('inf'), dtype=np.float32)
-        self.observation_space = spaces.Box(low, high, dtype=np.float32)
+
+        # set observation spaces
+        if return_obs_as_vector:
+            observation_featurizer = DefaultFeaturizerForMultiLabelRank(self.action_space) if observation_featurizer is None \
+                                        else observation_featurizer
+        else:
+            observation_featurizer = None
         super().__init__(max_steps, reward_function, observation_featurizer, return_obs_as_vector)
 
         # set the counter
@@ -77,7 +79,7 @@ class MultiLabelEnv(BaseEnv):
         self.time_step += 1
 
         # get the updated observation
-        updated_observation = self.current_sample.observation.get_updated_observation(action_str, self.observation_featurizer)
+        updated_observation = self.current_sample.observation.get_updated_observation(action_str, self.observation_featurizer, self.return_obs_as_vector)
 
         # update the current sample (just the observation)
         self.current_sample.observation = updated_observation
@@ -104,10 +106,11 @@ class MultiLabelEnv(BaseEnv):
         self.time_step = 0
 
         # init on reset
-        self.observation_featurizer.init_on_reset(sample.input_text)
+        if self.observation_featurizer is not None:
+            self.observation_featurizer.init_on_reset(sample.input_text)
 
         # get observation
-        observation = Observation.build(sample.input_text, [], self.observation_featurizer)
+        observation = Observation.build(sample.input_text, [], self.observation_featurizer, self.return_obs_as_vector)
 
         # construct current data point
         self.current_sample = DataPoint(text=sample.input_text, label=sample.oracle_label,

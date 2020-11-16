@@ -8,10 +8,11 @@ def sample():
     sample = Sample(input_text="A sample text", oracle_label=["A", "B"])
     return sample
 
+
 @pytest.fixture
 def env():
     env = MultiLabelEnv(possible_labels=["A", "B", "C"], max_steps=3, return_obs_as_vector=False)
-    return env
+    yield env
 
 
 def test_sequence_timeout(env, sample):
