@@ -14,7 +14,7 @@ def sample():
 @pytest.fixture
 def env():
     env = QAEnv(return_obs_as_vector=False)
-    return env
+    yield env
 
 
 def test_correct_answer(env, sample):

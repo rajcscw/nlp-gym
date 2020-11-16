@@ -12,7 +12,7 @@ def sample():
 @pytest.fixture
 def env():
     env = SeqTagEnv(possible_labels=["A", "B", "C"], return_obs_as_vector=False)
-    return env
+    yield env
 
 
 def test_sequence(env, sample):
