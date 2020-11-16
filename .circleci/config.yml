@@ -15,6 +15,7 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             pip install pytest
+            pip install coverage
             pip install .
     
       - run:
@@ -22,7 +23,9 @@ jobs:
           command: |
             . venv/bin/activate
             mkdir test-reports
-            pytest --junitxml=test-reports/results.xml tests
+            coverage run --source=./nlp_gym -m pytest --junitxml=test-reports/results.xml tests
+            coverage report	
+            coverage html --directory=test-reports
 
       - store_test_results:
           path: test-reports
