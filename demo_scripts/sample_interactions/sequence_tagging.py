@@ -10,7 +10,7 @@ labels = pool.labels()
 reward_fn = EntityF1Score(dense=True, average="micro")
 
 # question answering env
-env = SeqTagEnv(possible_labels=labels, reward_function=reward_fn)
+env = SeqTagEnv(possible_labels=labels, reward_function=reward_fn, return_obs_as_vector=False)
 for sample, weight in pool:
     env.add_sample(sample, weight)
 
