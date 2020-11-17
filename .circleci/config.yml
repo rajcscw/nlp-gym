@@ -14,11 +14,23 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install .
             pip install pytest
+            pip install coverage
+            pip install .
     
       - run:
-          name: run tests
+          name: run unit tests
           command: |
             . venv/bin/activate
-            bash ./tests/run_tests.sh
+            mkdir test-reports
+            coverage run --source=./nlp_gym -m pytest --junitxml=test-reports/results.xml tests
+            coverage report
+            coverage html --directory=test-reports
+
+      - store_test_results:
+          path: test-reports
+
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
+  
