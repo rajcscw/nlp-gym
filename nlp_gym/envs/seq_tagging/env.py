@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Union
 
 import numpy as np
-from flair.data import Sentence
+from flair.tokenization import SpaceTokenizer
 from nlp_gym.core_components.sampler import PrioritySampler
 from nlp_gym.data_pools.base import Sample
 from nlp_gym.envs.common.action_space import ActionSpace
@@ -13,7 +13,6 @@ from nlp_gym.envs.seq_tagging.featurizer import DefaultFeaturizerForSeqTagging
 from nlp_gym.envs.common.reward import RewardFunction
 from nlp_gym.envs.seq_tagging.reward import EntityF1Score
 from rich import print
-
 
 @dataclass(init=True)
 class DataPoint:
@@ -94,14 +93,13 @@ class SeqTagEnv(BaseEnv):
                                     else self.current_sample.observation
         return observation_to_return, step_reward, done, {}
 
-
     @staticmethod
     def _tokenize(text: str, label: List[str]) -> List[str]:
-        sent = Sentence(text, use_tokenizer=False)
-        tokens = [token.text for token in sent]
+        tokens = SpaceTokenizer().run_tokenize(text)
+        token_texts = [token.text for token in tokens]
 
-        assert len(tokens) == len(label), "Tokenization does not match with labels"
-        return tokens
+        assert len(token_texts) == len(label), "Tokenization does not match with available labels"
+        return token_texts
 
     def reset(self, sample: Sample = None) -> Union[Observation, np.array]:
         """
