@@ -10,12 +10,6 @@ from nlp_gym.envs.seq_tagging.observation import ObservationFeaturizer, Observat
 
 class EmbeddingRegistry:
     _registry_mapping = {
-        "byte_pair": [BytePairEmbeddings("en")],
-        "fasttext": [WordEmbeddings("en-crawl")],
-        "fasttext_de": [WordEmbeddings('de-crawl')],
-    }
-
-    _registry_mapping = {
         "byte_pair": {
             "cls": [BytePairEmbeddings],
             "params": ["en"]
