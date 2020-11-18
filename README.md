@@ -7,7 +7,7 @@ The  toolkit provides interactive environments for standard NLP tasks such as se
 
 Sequence Tagging             |  Question Answering |  Multi-label Classification
 :-------------------------:|:-------------------------:|:-------------------------:
-<img src="assets/sequence_tagging.png" width="50%"/> |  <img src="assets/question_answering.png" width="50%"/> |  <img src="assets/multilabel.png" width="50%"/> 
+<img src="assets/sequence_tagging.png" width="100%"/> |  <img src="assets/question_answering.png" width="100%"/> |  <img src="assets/multilabel.png" width="100%"/> 
 
 
 - **Sequence Tagging:** Sequence tagging task can be cast as an MDP in which the given sentence is parsed in left-to-right order. At each step, one token is presented to the agent. The actions available to the agent are to TAG with one of the possible labels. The episode terminates when the end of the sentence is reached. By default, reward function is based on entity level F1 scores. It can be either *sparse* given at the end of the episode or *dense* in which at each step, a change in scores between steps is given as reward.
@@ -22,10 +22,15 @@ Sequence Tagging             |  Question Answering |  Multi-label Classification
 
 The environments provide standard RL interfaces and therefore can be used together with most RL frameworks such as [baselines](https://github.com/openai/baselines), [stable-baselines](https://github.com/hill-a/stable-baselines), and [RLLib](https://github.com/ray-project/ray). 
 
+
 Furthermore, the toolkit is designed in a modular fashion providing flexibility for users to extend tasks with their custom data sets, observations, and reward functions.
+
+
+_________________
 
 For more details with respect to observation, reward functions and featurizers, refer to our paper [NLPGym- A toolkit for evaluating RL agents on Natural Language Processing Tasks](https://arxiv.org/abs/2011.08272) which will be presented at [Wordplay: When Language Meets Games @ NeurIPS 2020](https://wordplay-workshop.github.io/)
 
+_________________
 
 # Cite
 If you use this repository for your research, please cite with following bibtex:
@@ -53,6 +58,7 @@ To install all the dependencies for using demo scripts:
 ```
 pip install .["demo"]
 ```
+</hr>
 
 ## Usage
 
