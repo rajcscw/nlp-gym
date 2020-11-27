@@ -48,13 +48,27 @@ If you use this repository for your research, please cite with following bibtex:
 ```
 
 ## Install
+
+### Using pip:
+
+```bash
+pip install nlp-gym
+```
+
+To install also the dependencies for using demo scripts
+
+```bash
+pip install nlp-gym["demo"]
+```
+
+### Alternatively from source:
 ```
 git clone https://github.com/rajcscw/nlp-gym.git
 cd nlp-gym
 pip install .
 ```
 
-To install all the dependencies for using demo scripts: 
+To install also the dependencies for using demo scripts: 
 ```
 pip install .["demo"]
 ```
