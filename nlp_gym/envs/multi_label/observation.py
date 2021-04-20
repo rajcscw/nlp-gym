@@ -32,6 +32,12 @@ class Observation(BaseObservation):
     def get_vector(self) -> torch.Tensor:
         return self.current_vector
 
+    def get_dict_repr(self) -> dict:
+        return {
+            "current_input_str": self.current_input_str,
+            "current_action_history": self.current_action_history
+        }
+
     @classmethod
     def build(cls, input_str: str, action_history: List[str],
               observation_featurizer: ObservationFeaturizer,

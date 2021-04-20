@@ -32,7 +32,7 @@ class MultiLabelEnv(BaseEnv):
     """
     def __init__(self, possible_labels: List[str], max_steps: int, reward_function: RewardFunction = None,
                  observation_featurizer: ObservationFeaturizer = None, return_obs_as_vector: bool = True,
-                 priority_scale: float = 0.0):
+                 return_obs_as_dict: bool = False, priority_scale: float = 0.0):
         self.sampler_for_replaying = PrioritySampler(priority_scale=priority_scale)
         self.current_sample: DataPoint = None
 
@@ -48,7 +48,7 @@ class MultiLabelEnv(BaseEnv):
                                         else observation_featurizer
         else:
             observation_featurizer = None
-        super().__init__(max_steps, reward_function, observation_featurizer, return_obs_as_vector)
+        super().__init__(max_steps, reward_function, observation_featurizer, return_obs_as_vector, return_obs_as_dict)
 
         # set the counter
         self.time_step = None
@@ -85,8 +85,7 @@ class MultiLabelEnv(BaseEnv):
         self.current_sample.observation = updated_observation
 
         # return observation, reward, done, info
-        observation_to_return = self.current_sample.observation.get_vector().numpy() if self.return_obs_as_vector \
-                                else self.current_sample.observation
+        observation_to_return = self._pack_observation(self.current_sample.observation)
         return observation_to_return, step_reward, self.is_terminal(action_str), {}
 
     def is_terminal(self, action_str: str):
@@ -116,8 +115,7 @@ class MultiLabelEnv(BaseEnv):
         self.current_sample = DataPoint(text=sample.input_text, label=sample.oracle_label,
                                         observation=observation)
 
-        observation_to_return = self.current_sample.observation.get_vector().numpy() if self.return_obs_as_vector \
-                                else self.current_sample.observation
+        observation_to_return = self._pack_observation(self.current_sample.observation)
 
         return observation_to_return
 
