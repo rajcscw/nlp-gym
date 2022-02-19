@@ -13,18 +13,24 @@ class BaseEnv(gym.Env):
     """
     A base class for all the environments
     """
+
     def __init__(self, max_steps: int, reward_function: RewardFunction,
-                 observation_featurizer: BaseObservationFeaturizer, return_obs_as_vector: bool = True):
+                 observation_featurizer: BaseObservationFeaturizer, return_obs_as_vector: bool = True,
+                 return_obs_as_dict: bool = False):
         """
         Args:
             max_steps (int): max steps for each episode
             reward_function (RewardFunction): reward function that computes scalar reward for each observation-action
             observation_featurizer (ObservationFeaturizer): a featurizer that vectorizes input and context of observation
-            return_obs_vector (bool): return the observation as vector
+            return_obs_as_vector (bool): return the observation as vector
+            return_obs_as_dict (bool): return the observation as dict
         """
         self.max_steps = max_steps
         self.reward_function = reward_function
         self.return_obs_as_vector = return_obs_as_vector
+        self.return_obs_as_dict = return_obs_as_dict
+        assert (return_obs_as_vector and not return_obs_as_dict) or (
+            not return_obs_as_vector and return_obs_as_dict), "Only one of return_obs_as_vector and return_obs_as_dict can be requested"
         self.set_featurizer(observation_featurizer)
 
     # Standard gym methods
@@ -71,6 +77,14 @@ class BaseEnv(gym.Env):
         """
         return self.action_space
 
+    def _pack_observation(self, observation: BaseObservation):
+        observation_to_return = observation.get_vector(
+        ).numpy() if self.return_obs_as_vector else observation
+
+        observation_to_return = observation.get_dict_repr(
+        ) if self.return_obs_as_dict and not self.return_obs_as_vector else observation_to_return
+        return observation_to_return
+
     # Additional methods for online learning and sampling
 
     @abstractmethod
@@ -98,6 +112,8 @@ class BaseEnv(gym.Env):
             self._set_spaces(observation_featurizer)
 
     def _set_spaces(self, observation_featurizer: BaseObservationFeaturizer):
-        low = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=-float('inf'), dtype=np.float32)
-        high = np.full(shape=(observation_featurizer.get_observation_dim(),), fill_value=float('inf'), dtype=np.float32)
+        low = np.full(shape=(observation_featurizer.get_observation_dim(),),
+                      fill_value=-float('inf'), dtype=np.float32)
+        high = np.full(shape=(observation_featurizer.get_observation_dim(
+        ),), fill_value=float('inf'), dtype=np.float32)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)

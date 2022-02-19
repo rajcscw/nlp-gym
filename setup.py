@@ -11,5 +11,5 @@ setup(name="nlp_gym",
       install_requires=["numpy", "torch", "nltk", "flair", "pandas", "matplotlib",
                         "seaborn", "sklearn", "tqdm", "edit_distance", "rich",
                         "gym", "pytorch-nlp", "datasets", "wget"],
-      extras_require={'demo': ["tensorflow==1.15.0", "stable-baselines[mpi]"]},
+      extras_require={'demo': ["tensorflow==1.15.0", "stable-baselines3"]},
       tests_requires=["pytest"])

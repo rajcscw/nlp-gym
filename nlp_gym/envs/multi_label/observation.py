@@ -32,14 +32,22 @@ class Observation(BaseObservation):
     def get_vector(self) -> torch.Tensor:
         return self.current_vector
 
+    def get_dict_repr(self) -> dict:
+        return {
+            "current_input_str": self.current_input_str,
+            "current_action_history": self.current_action_history
+        }
+
     @classmethod
     def build(cls, input_str: str, action_history: List[str],
               observation_featurizer: ObservationFeaturizer,
               featurize: bool) -> 'Observation':
         observation = Observation(input_str, action_history)
         if featurize:
-            observation.current_vector = observation_featurizer.featurize(observation)
-            assert observation.get_vector().shape[0] == observation_featurizer.get_observation_dim()
+            observation.current_vector = observation_featurizer.featurize(
+                observation)
+            assert observation.get_vector(
+            ).shape[0] == observation_featurizer.get_observation_dim()
         return observation
 
     def get_updated_observation(self, action: str, observation_featurizer: ObservationFeaturizer,

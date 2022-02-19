@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import List, Tuple, Union
 
 import numpy as np
-from gym import spaces
 from rich import print
 
 from nlp_gym.core_components.sampler import PrioritySampler
@@ -30,10 +29,12 @@ class MultiLabelEnv(BaseEnv):
     This environment can be used for multi-label classification and label ranking based on the provided reward function
 
     """
+
     def __init__(self, possible_labels: List[str], max_steps: int, reward_function: RewardFunction = None,
                  observation_featurizer: ObservationFeaturizer = None, return_obs_as_vector: bool = True,
-                 priority_scale: float = 0.0):
-        self.sampler_for_replaying = PrioritySampler(priority_scale=priority_scale)
+                 return_obs_as_dict: bool = False, priority_scale: float = 0.0):
+        self.sampler_for_replaying = PrioritySampler(
+            priority_scale=priority_scale)
         self.current_sample: DataPoint = None
 
         # reward function
@@ -45,10 +46,11 @@ class MultiLabelEnv(BaseEnv):
         # set observation spaces
         if return_obs_as_vector:
             observation_featurizer = DefaultFeaturizerForMultiLabelRank(self.action_space) if observation_featurizer is None \
-                                        else observation_featurizer
+                else observation_featurizer
         else:
             observation_featurizer = None
-        super().__init__(max_steps, reward_function, observation_featurizer, return_obs_as_vector)
+        super().__init__(max_steps, reward_function, observation_featurizer,
+                         return_obs_as_vector, return_obs_as_dict)
 
         # set the counter
         self.time_step = None
@@ -73,20 +75,22 @@ class MultiLabelEnv(BaseEnv):
         target_labels = copy.deepcopy(self.current_sample.label)
 
         # compute reward function
-        step_reward = self.reward_function(self.current_sample.observation, action_str, target_labels)
+        step_reward = self.reward_function(
+            self.current_sample.observation, action_str, target_labels)
 
         # increment the time step
         self.time_step += 1
 
         # get the updated observation
-        updated_observation = self.current_sample.observation.get_updated_observation(action_str, self.observation_featurizer, self.return_obs_as_vector)
+        updated_observation = self.current_sample.observation.get_updated_observation(
+            action_str, self.observation_featurizer, self.return_obs_as_vector)
 
         # update the current sample (just the observation)
         self.current_sample.observation = updated_observation
 
         # return observation, reward, done, info
-        observation_to_return = self.current_sample.observation.get_vector().numpy() if self.return_obs_as_vector \
-                                else self.current_sample.observation
+        observation_to_return = self._pack_observation(
+            self.current_sample.observation)
         return observation_to_return, step_reward, self.is_terminal(action_str), {}
 
     def is_terminal(self, action_str: str):
@@ -110,14 +114,15 @@ class MultiLabelEnv(BaseEnv):
             self.observation_featurizer.init_on_reset(sample.input_text)
 
         # get observation
-        observation = Observation.build(sample.input_text, [], self.observation_featurizer, self.return_obs_as_vector)
+        observation = Observation.build(
+            sample.input_text, [], self.observation_featurizer, self.return_obs_as_vector)
 
         # construct current data point
         self.current_sample = DataPoint(text=sample.input_text, label=sample.oracle_label,
                                         observation=observation)
 
-        observation_to_return = self.current_sample.observation.get_vector().numpy() if self.return_obs_as_vector \
-                                else self.current_sample.observation
+        observation_to_return = self._pack_observation(
+            self.current_sample.observation)
 
         return observation_to_return
 
@@ -126,8 +131,10 @@ class MultiLabelEnv(BaseEnv):
 
     def render(self):
         print(f"[italic yellow]Step {self.time_step}[/italic yellow]")
-        print(f"[italic red]Input Text [/italic red]: {self.current_sample.text}")
-        print(f"[italic red]Label Sequence[/italic red]: {self.current_sample.observation.get_current_action_history()}")
+        print(
+            f"[italic red]Input Text [/italic red]: {self.current_sample.text}")
+        print(
+            f"[italic red]Label Sequence[/italic red]: {self.current_sample.observation.get_current_action_history()}")
 
     # Methods for online learning and sampling
     def add_sample(self, sample: Sample, weight: int = 1.0):
