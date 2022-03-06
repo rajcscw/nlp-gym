@@ -31,21 +31,25 @@ class TextGenEnv(Env):
         self._max_text_length = max_text_length if max_text_length else self._tokenizer.model_max_length
         super().__init__()
 
-        # check the tokenizer and add padding tokens
-
         # set the observation and action space here
         self._vocab_size = len(tokenizer.vocab)
         self.observation_space = DictSpace({
-            # # we have to provide fixed sized inputs (padded) because sb3 support for DictObsersevation is limited
-            # and while creating rollout buffers, observations are concatenated for each key
+            # we have to provide fixed sized inputs (padded) because sb3 support for DictObsersevation is limited
+            # while creating rollout buffers, observations are concatenated for each key
             "prompt_or_input_encoded_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_text_length,)),
             "prompt_or_input_attention_mask_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_text_length,)),
-            "context_encoded_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_text_length,)),
-            "context_attention_mask_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_text_length,)),
+            "context_encoded_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_steps,)),
+            "context_attention_mask_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_steps,)),
+            "input_encoded_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_text_length+self._max_steps,)),
+            "input_attention_mask_pt": spaces.Box(low=0, high=self._vocab_size, shape=(self._max_text_length+self._max_steps,)),
         })
         self.action_space = Discrete(n=self._vocab_size)
         self.sampler_for_replaying = PrioritySampler(
             priority_scale=priority_scale)
+
+        # check the tokenizer and add padding tokens
+        if self._tokenizer.pad_token is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
 
         # init tracking variables
         self.__current_sample = None
@@ -67,7 +71,7 @@ class TextGenEnv(Env):
 
         # populate additional info
         info = {
-            "output": self.__current_obs.decoded_context,
+            "output": self.__current_obs.context_text,
         }
 
         return self.__current_obs.to_dict(), reward, done, info
@@ -81,24 +85,13 @@ class TextGenEnv(Env):
             sample = self.sampler_for_replaying.sample(size=1)[0]
         self.__current_sample = sample
 
-        self.__current_obs = Observation.init_from_sample(sample)
-
-        # tokenize the input text
-        tokenized_input_pt = self._tokenizer.encode(
-            sample.prompt_or_input_text, return_tensors="pt")
-
-        # init the context (to BOS token - does it apply for all tokenizers?)
-        context_pt = torch.tensor([self._tokenizer.bos_token_id])
+        # init the observation
+        self.__current_obs = Observation.init_from_sample(sample, self._tokenizer,
+                                                          self._max_text_length, self._max_steps)
 
         # start the time step counter
         self.__time_step = 0
 
-        # initialize the observation
-        self.__current_obs = Observation(prompt_or_input_text=sample.prompt_or_input_text,
-                                         prompt_or_input_pt=tokenized_input_pt,
-                                         context_pt=context_pt,
-                                         decoded_context=None,
-                                         max_text_length=self._max_text_length)
         dict_observation = self.__current_obs.to_dict()
         return dict_observation
 
@@ -126,7 +119,7 @@ if __name__ == "__main__":
     # Implement render function - later
     # Verify step and reset - done
     # Run with random policy - done
-    # RUn with gpt policy pretrained - TBD
+    # RUn with gpt policy pretrained - done
     # Implement datapool - TBD
     # Implement unit tests
     # Implement
