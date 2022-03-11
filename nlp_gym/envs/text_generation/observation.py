@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, List
+from matplotlib.cbook import flatten
 
 import torch
 from transformers import AutoTokenizer
@@ -33,15 +34,35 @@ class Observation:
         For stable baselines (only return tensor items)
         """
         dict_obs = {
-            "prompt_or_input_encoded_pt": self.prompt_or_input_encoded_pt,
-            "prompt_or_input_attention_mask_pt": self.prompt_or_input_attention_mask_pt,
-            "context_encoded_pt": self.context_encoded_pt,
-            "context_attention_mask_pt": self.context_attention_mask_pt,
-            "input_encoded_pt": self.input_encoded_pt,
-            "input_attention_mask_pt": self.input_attention_mask_pt
+            "prompt_or_input_encoded_pt": self.prompt_or_input_encoded_pt.numpy().flatten(),
+            "prompt_or_input_attention_mask_pt": self.prompt_or_input_attention_mask_pt.numpy().flatten(),
+            "context_encoded_pt": self.context_encoded_pt.numpy().flatten(),
+            "context_attention_mask_pt": self.context_attention_mask_pt.numpy().flatten(),
+            "input_encoded_pt": self.input_encoded_pt.numpy().flatten(),
+            "input_attention_mask_pt": self.input_attention_mask_pt.numpy().flatten()
 
         }
         return dict_obs
+
+    @staticmethod
+    def _concat(prompt: torch.tensor, prompt_mask: torch.tensor,
+                context: torch.tensor, context_mask: torch.tensor,
+                pad_token: int):
+
+        prompt_ = prompt[:, prompt_mask.flatten().bool().tolist()]
+        context_ = context[:, context_mask.flatten().bool().tolist()]
+        actual_size = prompt_.shape[1] + context_.shape[1]
+
+        full_size = prompt.shape[1] + context.shape[1]
+        concatenated = torch.full(
+            (full_size,), fill_value=pad_token).reshape(1, -1)
+        concatenated_mask = torch.zeros((1, full_size)).int()
+
+        concatenated[:, full_size -
+                     actual_size:] = torch.cat((prompt_, context_), dim=1)
+        concatenated_mask[:, full_size -
+                          actual_size:] = 1
+        return concatenated, concatenated_mask
 
     def update(self, action: int, tokenizer: AutoTokenizer) -> "Observation":
         """
@@ -53,23 +74,24 @@ class Observation:
         current_context_attention_mask = deepcopy(
             self.context_attention_mask_pt)
 
-        # get context length/index
-        # find the first entry where the mask is 0
-        next_index = self.context_attention_mask_pt.flatten().tolist().index(0)
+        # just shift the context (also the attention mask) to left by 1
+        current_context[:, 0:-1] = current_context[:, 1:].clone()
+        current_context_attention_mask[:, 0:-
+                                       1] = current_context_attention_mask[:, 1:].clone()
 
-        # update the context
-        current_context[:, next_index] = action
-        current_context_attention_mask[:, next_index] = 1
+        # add the action always at the end (assumes left padding)
+        current_context[:, -1] = action
+        current_context_attention_mask[:, -1] = 1
 
         # decode the context
         context_text = tokenizer.decode(
             current_context.flatten(), skip_special_tokens=True)
 
-        # concatenate
-        input_encoded_pt = torch.cat(
-            (self.prompt_or_input_encoded_pt, current_context), dim=1)
-        input_attention_mask_pt = torch.cat(
-            (self.prompt_or_input_attention_mask_pt, current_context_attention_mask), dim=1)
+        # concatenate and still keep the left padding
+        input_encoded_pt, input_attention_mask_pt = Observation._concat(
+            self.prompt_or_input_encoded_pt, self.prompt_or_input_attention_mask_pt,
+            current_context, current_context_attention_mask,
+            tokenizer.pad_token_id)
 
         # and create a new observation
         obs = Observation(self.prompt_or_input_encoded_pt,
@@ -105,10 +127,10 @@ class Observation:
                                     return_attention_mask=True)
 
         # concatenate
-        input_encoded_pt = torch.cat(
-            (prompt_outputs.input_ids, context_outputs.input_ids), dim=1)
-        input_attention_mask_pt = torch.cat(
-            (prompt_outputs.attention_mask, context_outputs.attention_mask), dim=1)
+        input_encoded_pt, input_attention_mask_pt = Observation._concat(
+            prompt_outputs.input_ids, prompt_outputs.attention_mask,
+            context_outputs.input_ids, context_outputs.attention_mask,
+            tokenizer.pad_token_id)
 
         obs = Observation(prompt_or_input_encoded_pt=prompt_outputs.input_ids,
                           prompt_or_input_attention_mask_pt=prompt_outputs.attention_mask,
@@ -126,13 +148,14 @@ class Observation:
 if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
     sample = Sample("1", "Hello, this is cool", ["it is good", "going well"])
 
     obs = Observation.init_from_sample(
         sample=sample,
         tokenizer=tokenizer,
-        max_input_length=256,
-        max_context_length=256
+        max_input_length=24,
+        max_context_length=24
     )
     updated_obs = obs.update(10, tokenizer)
     updated_obs = updated_obs.update(11, tokenizer)

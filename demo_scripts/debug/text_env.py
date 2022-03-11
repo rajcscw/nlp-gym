@@ -1,36 +1,28 @@
-from nlp_gym.envs.text_generation.env import TextGenEnv
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from nlp_gym.data_pools.custom_text_generation_pools import CommonGen
 from nlp_gym.data_pools.text_generation_pool import Sample
+from nlp_gym.envs.text_generation.env import TextGenEnv
+from nlp_gym.envs.text_generation.reward import MeteorRewardFunction
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 
-def get_last(obs):
-    # get context length/index
-    # find the first entry where the mask is 0
-    index = obs["context_attention_mask_pt"].flatten().tolist().index(0)-1
-
-    if index == -1:
-        index = 0
-
-    return obs["context_encoded_pt"][:, index]
-
+# reward function
+reward_fn = MeteorRewardFunction()
 
 # tokenizer
 model_name = "gpt2-xl"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-env = TextGenEnv(tokenizer, reward_function=None,
+env = TextGenEnv(tokenizer, reward_function=reward_fn,
                  max_steps=10, max_text_length=24)
 
 # model
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+model.config.pad_token_id = tokenizer.pad_token_id
 
-# sample
-sample = Sample(1, "Transformers are the", ["Hello, who is this"])
-
-input_ids = tokenizer("Transformers are the", return_tensors="pt")[
-    "input_ids"].to(device)
+# Sample
+sample = Sample(1, prompt_or_input_text="Transformers are the",
+                references=["best in the world"])
 
 # play an episode
 obs = env.reset(sample)
@@ -38,24 +30,19 @@ done = False
 generated = []
 while not done:
 
-    # given the obs, get the next action using Gpt-2
-    output = model(input_ids=obs["input_encoded_pt"].to(device),
-                   attention_mask=obs["input_attention_mask_pt"].to(device))
+    input_ids = torch.from_numpy(
+        obs["input_encoded_pt"]).reshape(1, -1).to(device)
+    model_inputs = model.prepare_inputs_for_generation(
+        input_ids, attention_mask=torch.from_numpy(obs["input_attention_mask_pt"]).reshape(1, -1).to(device))
+    output = model(**model_inputs)
 
-    # pick the logits corresponding to the right most token (AR)
-    # alternativelty one can just concanate the prompt and context tokens
-    masks = obs["input_attention_mask_pt"].flatten().tolist()
-    masks.reverse()
-    index = masks.index(1)
-    index = 34 - index - 1
-
-    # choose the action
-    next_token_logits = output.logits[0, index-1, :]
+    next_token_logits = output.logits[0, -1, :]
     next_token_probs = torch.softmax(next_token_logits, dim=-1)
     sorted_ids = torch.argsort(next_token_probs, dim=-1, descending=True)
     action = sorted_ids[0]
-    print(index, tokenizer.decode(action))
+    print(tokenizer.decode(action))
 
     # execute that action
-    obs, _, done, info = env.step(action)
+    obs, reward, done, info = env.step(action)
+print(reward)
 print(info)

@@ -5,7 +5,7 @@ from gym import Env, spaces
 from gym.spaces.dict import Dict as DictSpace
 from gym.spaces.discrete import Discrete
 from nlp_gym.data_pools.text_generation_pool import Sample
-from nlp_gym.envs.common.reward import RewardFunction
+from nlp_gym.envs.text_generation.reward import RewardFunction
 from nlp_gym.envs.text_generation.observation import Observation
 from transformers import AutoTokenizer
 from nlp_gym.core_components.sampler import PrioritySampler
@@ -50,6 +50,7 @@ class TextGenEnv(Env):
         # check the tokenizer and add padding tokens
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
+        self._tokenizer.padding_side = "left"  # TBD: configure this
 
         # init tracking variables
         self.__current_sample = None
@@ -59,15 +60,19 @@ class TextGenEnv(Env):
     def step(self, action: int) -> Tuple[Dict[str, torch.tensor], int, bool, dict]:
         self.__time_step += 1
 
+        # previous obs
+        previous_obs = self.__current_obs
+
         # just update the context tensor and gets the new observation
         self.__current_obs = self.__current_obs.update(action, self._tokenizer)
-
-        # compute reward
-        reward = None if self._reward_function is None else self._reward_function()
 
         # decide if the episode is finished or not
         done = (action == self._tokenizer.eos_token_id or self.__time_step ==
                 self._max_steps)
+
+        # compute reward
+        reward = None if self._reward_function is None else self._reward_function(
+            previous_obs, action, self.__current_obs, done)
 
         # populate additional info
         info = {
@@ -101,20 +106,8 @@ class TextGenEnv(Env):
     def close(self):
         pass
 
-
-if __name__ == "__main__":
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    env = TextGenEnv(tokenizer, reward_function=None, max_steps=10)
-
-    sample = Sample(1, "Hello", ["Hello, who is this"])
-
-    # play an episode
-    obs = env.reset(sample)
-    done = False
-    while not done:
-        action = env.action_space.sample()
-        _, _, done, info = env.step(action)
-    print(info)
+    def add_sample(self, sample: Sample, weight: int = 1.0):
+        self.sampler_for_replaying.add(sample, weight)
 
     # Implement render function - later
     # Verify step and reset - done

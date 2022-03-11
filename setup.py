@@ -10,6 +10,6 @@ setup(name="nlp_gym",
       url="https://github.com/rajcscw/nlp-gym/",
       install_requires=["numpy", "torch", "nltk", "flair", "pandas", "matplotlib",
                         "seaborn", "sklearn", "tqdm", "edit_distance", "rich",
-                        "gym", "pytorch-nlp", "datasets", "wget", "transformers"],
+                        "gym", "pytorch-nlp", "datasets", "wget", "transformers", "stable-baselines3"],
       extras_require={'demo': ["tensorflow==1.15.0", "stable-baselines[mpi]"]},
       tests_requires=["pytest"])
