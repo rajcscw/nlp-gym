@@ -51,6 +51,7 @@ class TextGenEnv(Env):
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
         self._tokenizer.padding_side = "left"  # TBD: configure this
+        self._tokenizer.truncation_side = "left"
 
         # init tracking variables
         self.__current_sample = None

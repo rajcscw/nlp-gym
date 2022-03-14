@@ -1,5 +1,5 @@
 from nlp_gym.data_pools.text_generation_pool import TextGenPool, Sample
-from abc import abstractclassmethod
+from abc import abstractclassmethod, abstractmethod
 from typing import List
 from datasets import load_dataset
 
@@ -22,7 +22,22 @@ class CommonGen(TextGenPool):
         return pool_instance
 
 
+class Xsum(TextGenPool):
+    @classmethod
+    def prepare(cls, split: str):
+        dataset = load_dataset("gem", "xsum")
+        dataset_split = dataset[split]
+        samples = []
+        for ix, item in enumerate(dataset_split):
+            sample = Sample(id=f"{split}_{ix}",
+                            prompt_or_input_text=item["document"],
+                            references=[item["target"]]
+                            )
+            samples.append(sample)
+        pool_instance = cls(samples)
+        return pool_instance
+
+
 if __name__ == "__main__":
-    ds = CommonGen.prepare("validation")
-    for sample, _ in ds:
-        print(sample)
+    pool = Xsum.prepare("train")
+    print(len(pool))
