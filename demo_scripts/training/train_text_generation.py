@@ -1,11 +1,10 @@
 from nlp_gym.data_pools.custom_text_generation_pools import CommonGen, Sample, Xsum
 from nlp_gym.envs.text_generation.env import TextGenEnv
-from nlp_gym.envs.text_generation.reward import MeteorRewardFunctionWithKL, MeteorRewardFunction
+from nlp_gym.envs.text_generation.reward import MeteorRewardFunctionWithKL
 from stable_baselines3.common.env_checker import check_env
 from transformers import AutoTokenizer
 from stable_baselines3.ppo.ppo import PPO
 from nlp_gym.envs.text_generation.policy import LMActorCriticPolicy
-import torch
 
 
 def run_episode(model: PPO, env: TextGenEnv, data_pool: CommonGen, sample: Sample = None):

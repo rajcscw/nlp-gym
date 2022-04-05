@@ -78,6 +78,7 @@ class TextGenEnv(Env):
         # populate additional info
         info = {
             "output": self.__current_obs.context_text,
+            "action_history": self.__current_obs.action_history
         }
 
         return self.__current_obs.to_dict(), reward, done, info
@@ -109,11 +110,3 @@ class TextGenEnv(Env):
 
     def add_sample(self, sample: Sample, weight: int = 1.0):
         self.sampler_for_replaying.add(sample, weight)
-
-    # Implement render function - later
-    # Verify step and reset - done
-    # Run with random policy - done
-    # RUn with gpt policy pretrained - done
-    # Implement datapool - TBD
-    # Implement unit tests
-    # Implement

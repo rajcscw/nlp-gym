@@ -1,6 +1,4 @@
 from nlp_gym.data_pools.text_generation_pool import TextGenPool, Sample
-from abc import abstractclassmethod, abstractmethod
-from typing import List
 from datasets import load_dataset
 
 
@@ -36,8 +34,3 @@ class Xsum(TextGenPool):
             samples.append(sample)
         pool_instance = cls(samples)
         return pool_instance
-
-
-if __name__ == "__main__":
-    pool = Xsum.prepare("train")
-    print(len(pool))

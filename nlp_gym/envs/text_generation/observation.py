@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from lib2to3.pgen2 import token
 from typing import Dict, List
 from matplotlib.cbook import flatten
 
@@ -28,6 +29,9 @@ class Observation:
     # concatenated input
     input_encoded_pt: torch.tensor
     input_attention_mask_pt: torch.tensor
+
+    # list of actions
+    action_history: List[str]
 
     def to_dict(self) -> Dict[str, torch.tensor]:
         """
@@ -69,6 +73,10 @@ class Observation:
         Updates the observation using the given action
         """
 
+        # update the action history
+        current_action_history = deepcopy(self.action_history)
+        current_action_history.append(tokenizer._convert_id_to_token(action))
+
         # get the current context
         current_context = deepcopy(self.context_encoded_pt)
         current_context_attention_mask = deepcopy(
@@ -102,7 +110,8 @@ class Observation:
                           context_text,
                           self.target_or_reference_texts,
                           input_encoded_pt,
-                          input_attention_mask_pt)
+                          input_attention_mask_pt,
+                          current_action_history)
 
         return obs
 
@@ -140,7 +149,8 @@ class Observation:
                           input_encoded_pt=input_encoded_pt,
                           input_attention_mask_pt=input_attention_mask_pt,
                           context_text="",
-                          target_or_reference_texts=sample.references)
+                          target_or_reference_texts=sample.references,
+                          action_history=[])
 
         return obs
 
