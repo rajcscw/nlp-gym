@@ -31,7 +31,13 @@ class LMActorCriticPolicy(BasePolicy):
                            model_name: str):
         self._policy_model = AutoModelForCausalLM.from_pretrained(
             model_name)
-        self._value_model = AutoModelForCausalLM.from_pretrained(model_name)
+        self._value_model = AutoModelForCausalLM.from_pretrained(
+            model_name)
+
+        if self._policy_model.is_parallelizable:
+            self._policy_model.parallelize()
+            self._value_model.parallelize()
+
         self._value_head = nn.Linear(
             self._value_model.config.hidden_size, 1)
         self._ref_model = deepcopy(self._policy_model)
@@ -94,6 +100,7 @@ class LMActorCriticPolicy(BasePolicy):
         # forward pass to transformers
         output = self._value_model(
             output_hidden_states=True, **model_inputs)
+        output = output.to(self.device)
 
         last_tokens_hidden = output.hidden_states[-1][:, -1, :]
         values = self._value_head.forward(last_tokens_hidden)
@@ -162,6 +169,7 @@ class LMActorCriticPolicy(BasePolicy):
 
     def evaluate_actions(self, obs: torch.Tensor,
                          actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
         input_ids = obs["input_encoded_pt"].int()
         attention_mask = obs["input_attention_mask_pt"]
 

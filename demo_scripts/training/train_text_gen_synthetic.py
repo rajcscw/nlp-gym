@@ -6,7 +6,7 @@ from stable_baselines3.ppo.ppo import PPO
 from nlp_gym.envs.text_generation.policy import LMActorCriticPolicy
 from nlp_gym.envs.text_generation.reward import RewardFunction
 from nlp_gym.envs.text_generation.observation import Observation
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 
 
@@ -16,15 +16,19 @@ class TestTextGenPool(TextGenPool):
         samples = [Sample(id=f"{id}",
                           prompt_or_input_text=f"{id}",  # a dummy prompt
                           references=[]
-                          ) for id in range(int(1e+2))]
+                          ) for id in range(int(1e+3))]
         pool_instance = cls(samples)
         return pool_instance
 
 
 class RewardIncreasingNumbers(RewardFunction):
-    def __init__(self, eos_token) -> None:
+    def __init__(self, eos_token: str,
+                 min_tokens: int = 5,
+                 include_prompt: bool = True) -> None:
         super().__init__()
         self.eos_token = eos_token
+        self.min_tokens = min_tokens
+        self.include_prompt = include_prompt
 
     def is_number(self, text):
         try:
@@ -38,12 +42,14 @@ class RewardIncreasingNumbers(RewardFunction):
                  current_observation: Observation,
                  done: bool) -> float:
         if done:
-            tokens = current_observation.action_history
-            if self.eos_token in tokens:
-                tokens.remove(self.eos_token)
+            gen_tokens = [
+                current_observation.prompt_or_input_text] if self.include_prompt else []
+            gen_tokens.extend(current_observation.action_history)
+            if self.eos_token in gen_tokens:
+                gen_tokens.remove(self.eos_token)
             number_tokens = [float(token)
-                             for token in tokens if self.is_number(token)]
-            if len(number_tokens) > 2:  # must contain atleast 2 numbers
+                             for token in gen_tokens if self.is_number(token)]
+            if len(number_tokens) > self.min_tokens:  # must contain atleast min numbers
                 # then we check how many numbers are in the sorted order
                 sorted_count = 1
                 previous_token = number_tokens[0]
@@ -53,7 +59,9 @@ class RewardIncreasingNumbers(RewardFunction):
                         previous_token = token
                     else:
                         break
-                return (sorted_count/len(tokens)) + 1e-4
+                return (sorted_count/len(gen_tokens))
+            else:
+                return len(number_tokens) * 1e-4  # bonus to generate numbers
 
         return 0.0
 
@@ -79,10 +87,10 @@ if __name__ == "__main__":
     # reward function
     model_name = "distilgpt2"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    reward_fn = RewardIncreasingNumbers(tokenizer.eos_token)
+    reward_fn = RewardIncreasingNumbers(tokenizer.eos_token, 5)
 
     # data pool
-    data_pool = TestTextGenPool.prepare(tokenizer.bos_token)
+    data_pool = TestTextGenPool.prepare("")
     samples = [(sample, weight) for sample, weight in data_pool]
 
     # text generation env
