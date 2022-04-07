@@ -6,6 +6,8 @@ from stable_baselines3.ppo.ppo import PPO
 from nlp_gym.envs.text_generation.policy import LMActorCriticPolicy
 from nlp_gym.envs.text_generation.reward import RewardFunction
 from nlp_gym.envs.text_generation.observation import Observation
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.env_util import make_vec_env
 
 
 class TestTextGenPool(TextGenPool):
@@ -14,7 +16,7 @@ class TestTextGenPool(TextGenPool):
         samples = [Sample(id=f"{id}",
                           prompt_or_input_text=f"{id}",  # a dummy prompt
                           references=[]
-                          ) for id in range(int(1e+4))]
+                          ) for id in range(int(1e+2))]
         pool_instance = cls(samples)
         return pool_instance
 
@@ -73,28 +75,44 @@ def run_episode(model: PPO,
     print(info)
 
 
-# reward function
-model_name = "distilgpt2"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-reward_fn = RewardIncreasingNumbers(tokenizer.eos_token)
+if __name__ == "__main__":
+    # reward function
+    model_name = "distilgpt2"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    reward_fn = RewardIncreasingNumbers(tokenizer.eos_token)
 
-# data pool
-data_pool = TestTextGenPool.prepare(tokenizer.bos_token)
+    # data pool
+    data_pool = TestTextGenPool.prepare(tokenizer.bos_token)
+    samples = [(sample, weight) for sample, weight in data_pool]
 
-# text generation env
-env = TextGenEnv(tokenizer, reward_fn, max_text_length=10, max_steps=10)
-for sample, weight in data_pool:
-    env.add_sample(sample, weight)
+    # text generation env
+    eval_env = TextGenEnv(tokenizer, reward_fn,
+                          max_text_length=10, max_steps=10, samples=samples)
+    for sample, weight in data_pool:
+        eval_env.add_sample(sample, weight)
 
-# instantiate the PPO alg with the model
-model = PPO(policy=LMActorCriticPolicy, env=env, policy_kwargs={
-    "model_name": model_name,
-}, n_steps=128, batch_size=64, verbose=1, learning_rate=1e-5, n_epochs=20, ent_coef=1e-2)
+    # vectorized env for training
+    n_envs = 10
+    n_steps = 128
+    train_env = make_vec_env(TextGenEnv,
+                             n_envs=n_envs,
+                             vec_env_cls=SubprocVecEnv,
+                             env_kwargs={
+                                 "reward_function": reward_fn,
+                                 "max_text_length": 10,
+                                 "max_steps": 10,
+                                 "tokenizer": tokenizer,
+                                 "samples": samples
+                             })
 
+    # instantiate the PPO alg with the model
+    model = PPO(policy=LMActorCriticPolicy, env=train_env, policy_kwargs={
+        "model_name": model_name,
+    }, n_steps=n_steps, batch_size=64, verbose=1, learning_rate=1e-5, n_epochs=10, ent_coef=1e-2)
 
-run_episode(model,  env, data_pool)
+    run_episode(model,  eval_env, data_pool)
 
-# train
-for i in range(500):
-    model.learn(256)
-    run_episode(model,  env, data_pool)
+    # train
+    for i in range(500):
+        model.learn(n_envs * n_steps)
+        run_episode(model,  eval_env, data_pool)

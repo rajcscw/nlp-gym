@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 
 import torch
 from gym import Env, spaces
@@ -14,6 +14,7 @@ from nlp_gym.core_components.sampler import PrioritySampler
 class TextGenEnv(Env):
     def __init__(self, tokenizer: AutoTokenizer,
                  reward_function: RewardFunction,
+                 samples: Tuple[List[Sample], float],
                  max_steps: int = 512,
                  priority_scale: float = 0.0,
                  max_text_length: Optional[int] = None):
@@ -46,6 +47,8 @@ class TextGenEnv(Env):
         self.action_space = Discrete(n=self._vocab_size)
         self.sampler_for_replaying = PrioritySampler(
             priority_scale=priority_scale)
+        for sample, weight in samples:
+            self.sampler_for_replaying.add(sample, weight)
 
         # check the tokenizer and add padding tokens
         if self._tokenizer.pad_token is None:
