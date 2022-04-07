@@ -84,10 +84,11 @@ def run_episode(model: PPO,
 
 
 if __name__ == "__main__":
+
     # reward function
     model_name = "distilgpt2"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    reward_fn = RewardIncreasingNumbers(tokenizer.eos_token, 5)
+    reward_fn = RewardIncreasingNumbers(tokenizer.eos_token, 5, False)
 
     # data pool
     data_pool = TestTextGenPool.prepare("")
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         eval_env.add_sample(sample, weight)
 
     # vectorized env for training
-    n_envs = 10
+    n_envs = 10  # n_rollouts in parallel
     n_steps = 128
     train_env = make_vec_env(TextGenEnv,
                              n_envs=n_envs,
@@ -116,11 +117,12 @@ if __name__ == "__main__":
     # instantiate the PPO alg with the model
     model = PPO(policy=LMActorCriticPolicy, env=train_env, policy_kwargs={
         "model_name": model_name,
-    }, n_steps=n_steps, batch_size=64, verbose=1, learning_rate=1e-5, n_epochs=10, ent_coef=1e-2)
+        "apply_model_parallel": True,
+    }, n_steps=n_steps, batch_size=512, verbose=1, learning_rate=1e-4, n_epochs=5, ent_coef=1e-2)
 
     run_episode(model,  eval_env, data_pool)
 
     # train
-    for i in range(500):
+    for i in range(100):
         model.learn(n_envs * n_steps)
         run_episode(model,  eval_env, data_pool)

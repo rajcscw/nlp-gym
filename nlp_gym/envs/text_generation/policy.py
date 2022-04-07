@@ -19,9 +19,11 @@ class LMActorCriticPolicy(BasePolicy):
                  model_name: str,
                  optimizer_kwargs: Dict[str, Any] = {},
                  weight_decay: float = 1e-6,
-                 use_sde: bool = None):
+                 use_sde: bool = None,
+                 apply_model_parallel: bool = True):
         super().__init__(observation_space, action_space)
         self._action_space = action_space
+        self._apply_model_parallel = apply_model_parallel
         self._build_model_heads(model_name)
         self._setup_optimizer(optimizer_kwargs, weight_decay)
         self._action_dist = CategoricalDistribution(
@@ -33,14 +35,18 @@ class LMActorCriticPolicy(BasePolicy):
             model_name)
         self._value_model = AutoModelForCausalLM.from_pretrained(
             model_name)
+        self._ref_model = deepcopy(self._policy_model)
 
-        if self._policy_model.is_parallelizable:
-            self._policy_model.parallelize()
-            self._value_model.parallelize()
+        # apply model parallel
+        if self._apply_model_parallel:
+            if self._policy_model.is_parallelizable:
+                self._policy_model.parallelize()
+                self._ref_model.parallelize()
+            if self._value_model.is_parallelizable:
+                self._value_model.parallelize()
 
         self._value_head = nn.Linear(
             self._value_model.config.hidden_size, 1)
-        self._ref_model = deepcopy(self._policy_model)
 
     def _setup_optimizer(self, optimizer_kwargs: Dict[str, Any],
                          weight_decay: float):
@@ -56,6 +62,18 @@ class LMActorCriticPolicy(BasePolicy):
         self.optimizer = AdamW(
             optimizer_grouped_parameters, **optimizer_kwargs)
 
+    def _prepare_inputs_for_model(self, model: AutoModelForCausalLM,
+                                  input_ids: torch.tensor,
+                                  model_kwargs: Optional[Dict[str, torch.tensor]] = None):
+        model_inputs = model.prepare_inputs_for_generation(
+            input_ids, **model_kwargs)
+
+        if self._apply_model_parallel:
+            # if model is in parallel mode, move the tensors to the first device
+            model_inputs = {key: value.to(model.transformer.first_device) if isinstance(
+                value, torch.Tensor) else value for key, value in model_inputs.items()}
+        return model_inputs
+
     def _forward_policy(self, input_ids: torch.tensor,
                         attention_mask: torch.tensor,
                         model_kwargs: Optional[Dict[str, torch.tensor]] = None,
@@ -66,8 +84,9 @@ class LMActorCriticPolicy(BasePolicy):
             model_kwargs = {
                 "attention_mask": attention_mask,
             }
-        model_inputs = self._policy_model.prepare_inputs_for_generation(
-            input_ids, **model_kwargs)
+        model_inputs = self._prepare_inputs_for_model(self._policy_model,
+                                                      input_ids,
+                                                      model_kwargs)
 
         # forward pass to transformers
         output = self._policy_model(
@@ -94,15 +113,15 @@ class LMActorCriticPolicy(BasePolicy):
             model_kwargs = {
                 "attention_mask": attention_mask,
             }
-        model_inputs = self._value_model.prepare_inputs_for_generation(
-            input_ids, **model_kwargs)
+        model_inputs = self._prepare_inputs_for_model(self._value_model,
+                                                      input_ids,
+                                                      model_kwargs)
 
         # forward pass to transformers
         output = self._value_model(
             output_hidden_states=True, **model_inputs)
-        output = output.to(self.device)
 
-        last_tokens_hidden = output.hidden_states[-1][:, -1, :]
+        last_tokens_hidden = output.hidden_states[-1][:, -1, :].to(self.device)
         values = self._value_head.forward(last_tokens_hidden)
         return values
 
@@ -136,30 +155,32 @@ class LMActorCriticPolicy(BasePolicy):
             episode_start: Optional[np.ndarray] = None,
             deterministic: bool = False) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
 
-        # input ids and mask
-        input_ids = torch.from_numpy(
-            observation["input_encoded_pt"]).reshape(1, -1).to(self.device).int()
-        attention_mask = torch.from_numpy(
-            observation["input_attention_mask_pt"]).reshape(1, -1).to(self.device)
+        with torch.no_grad():
 
-        # use the past
-        if state is None:
-            model_kwargs = {
-                "attention_mask":  torch.from_numpy(
-                    observation["input_attention_mask_pt"]).reshape(1, -1).to(self.device)
-            }
-        else:
-            model_kwargs = state
+            # input ids and mask
+            input_ids = torch.from_numpy(
+                observation["input_encoded_pt"]).reshape(1, -1).to(self.device).int()
+            attention_mask = torch.from_numpy(
+                observation["input_attention_mask_pt"]).reshape(1, -1).to(self.device)
 
-        # forward heads
-        action, _, _, output = self._forward_policy(
-            input_ids, attention_mask, model_kwargs, True)
+            # use the past
+            if state is None:
+                model_kwargs = {
+                    "attention_mask":  torch.from_numpy(
+                        observation["input_attention_mask_pt"]).reshape(1, -1).to(self.device)
+                }
+            else:
+                model_kwargs = state
 
-        # update the model kwargs for further generation
-        model_kwargs = self._policy_model._update_model_kwargs_for_generation(
-            output, model_kwargs, is_encoder_decoder=self._policy_model.config.is_encoder_decoder
-        )
-        return action, model_kwargs
+            # forward heads
+            action, _, _, output = self._forward_policy(
+                input_ids, attention_mask, model_kwargs, True)
+
+            # update the model kwargs for further generation
+            model_kwargs = self._policy_model._update_model_kwargs_for_generation(
+                output, model_kwargs, is_encoder_decoder=self._policy_model.config.is_encoder_decoder
+            )
+            return action, model_kwargs
 
     def predict_values(self, obs: Dict[str, torch.tensor]):
         input_ids = obs["input_encoded_pt"].int()
@@ -186,8 +207,9 @@ class LMActorCriticPolicy(BasePolicy):
         model_kwargs = {
             "attention_mask": attention_mask,
         }
-        model_inputs = self._ref_model.prepare_inputs_for_generation(
-            input_ids, **model_kwargs)
+        model_inputs = self._prepare_inputs_for_model(self._ref_model,
+                                                      input_ids,
+                                                      model_kwargs)
         output = self._ref_model(
             output_hidden_states=True, **model_inputs)
         next_token_logits = output.logits[:, -1, :]
@@ -217,3 +239,10 @@ class LMActorCriticPolicy(BasePolicy):
             approx_kl_div = ((torch.exp(log_ratio) - 1) -
                              log_ratio).cpu().item()
             return approx_kl_div
+
+    def to(self, device):
+        if self._apply_model_parallel:
+            self._value_head = self._value_head.to(device)
+            return self
+        else:
+            return super().to(device)
