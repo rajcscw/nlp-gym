@@ -10,6 +10,7 @@ from torch import nn
 from transformers import AdamW, AutoModelForCausalLM
 from stable_baselines3.common.distributions import CategoricalDistribution
 from copy import deepcopy
+from transformers.generation_utils import top_k_top_p_filtering
 
 
 class LMActorCriticPolicy(BasePolicy):
@@ -20,7 +21,9 @@ class LMActorCriticPolicy(BasePolicy):
                  optimizer_kwargs: Dict[str, Any] = {},
                  weight_decay: float = 1e-6,
                  use_sde: bool = None,
-                 apply_model_parallel: bool = True):
+                 apply_model_parallel: bool = True,
+                 sample_during_rollout: bool = True,
+                 logits_filtering_args: dict = {}):
         super().__init__(observation_space, action_space)
         self._action_space = action_space
         self._apply_model_parallel = apply_model_parallel
@@ -28,6 +31,8 @@ class LMActorCriticPolicy(BasePolicy):
         self._setup_optimizer(optimizer_kwargs, weight_decay)
         self._action_dist = CategoricalDistribution(
             self._action_space.n)
+        self._sample_during_rollout = sample_during_rollout
+        self._logits_filtering_args = logits_filtering_args
 
     def _build_model_heads(self,
                            model_name: str):
@@ -74,6 +79,16 @@ class LMActorCriticPolicy(BasePolicy):
                 value, torch.Tensor) else value for key, value in model_inputs.items()}
         return model_inputs
 
+    def _sample_actions(self, next_token_logits: torch.tensor):
+        if self._logits_filtering_args:
+            next_token_logits = top_k_top_p_filtering(
+                next_token_logits, **self._logits_filtering_args)
+
+        dist = self._action_dist.proba_distribution(
+            action_logits=next_token_logits)
+        actions = dist.get_actions(not self._sample_during_rollout)
+        return actions
+
     def _forward_policy(self, input_ids: torch.tensor,
                         attention_mask: torch.tensor,
                         model_kwargs: Optional[Dict[str, torch.tensor]] = None,
@@ -100,7 +115,7 @@ class LMActorCriticPolicy(BasePolicy):
 
         # sample actions or evaluate if provided already
         if actions is None:
-            actions = dist.get_actions(greedy)
+            actions = self._sample_actions(next_token_logits)
         log_prob = dist.log_prob(actions)
 
         return actions, log_prob, entropy, output
