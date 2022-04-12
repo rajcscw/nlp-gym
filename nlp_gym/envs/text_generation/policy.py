@@ -43,7 +43,7 @@ class LMActorCriticPolicy(BasePolicy):
         self._ref_model = deepcopy(self._policy_model)
 
         # apply model parallel
-        if self._apply_model_parallel:
+        if torch.cuda.is_available() and self._apply_model_parallel:
             if self._policy_model.is_parallelizable:
                 self._policy_model.parallelize()
                 self._ref_model.parallelize()
