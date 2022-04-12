@@ -102,12 +102,12 @@ def run(args):
                 env=train_env,
                 policy_kwargs={
                     "model_name": model_name,
-                    "apply_model_parallel": True,
+                    "apply_model_parallel": args.model_parallel,
                 },
                 n_steps=args.n_steps,
                 batch_size=args.batch_size,
                 verbose=1,
-                learning_rate=args.learning_rate,
+                learning_rate=args.lr,
                 n_epochs=args.n_epochs,
                 ent_coef=args.ent_coef)
 
@@ -115,7 +115,7 @@ def run(args):
 
     # train
     for i in range(args.n_iters):
-        model.learn(args.n_envs * args.n_steps)
+        model.learn(args.n_parallel_envs * args.n_steps)
         run_episode(model,  eval_env, data_pool)
 
 
@@ -140,25 +140,29 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Fine-tune LM to generate controlled text")
-    parser.add_argument("--model_name", type="str",
+    parser.add_argument("--model_name", type=str,
                         default="distilgpt2", help="Name of the AutoModelForCausalLM")
-    parser.add_argument("--reward_min_tokens", type="int",
+    parser.add_argument("--reward_min_tokens", type=int,
                         default=5, help="Minimum number of number tokens that model has to generate")
-    parser.add_argument("--max_prompt_length", type="int",
+    parser.add_argument("--max_prompt_length", type=int,
                         default=10, help="Maximum length of input/prompt")
-    parser.add_argument("--max_episode_length", type="int",
+    parser.add_argument("--max_episode_length", type=int,
                         default=10, help="Maximum length of the episode")
-    parser.add_argument("--n_parallel_envs", type="int",
+    parser.add_argument("--n_parallel_envs", type=int,
                         default=10, help="Number of parallel envs for rollout")
-    parser.add_argument("--n_steps", type="int",
+    parser.add_argument("--n_steps", type=int,
                         default=128, help="The number of steps to run for each environment per update for PPO")
-    parser.add_argument("--batch_size", type="int",
+    parser.add_argument("--batch_size", type=int,
                         default=512, help="Batch size for PPO")
-    parser.add_argument("--lr", type="float",
+    parser.add_argument("--n_epochs", type=int,
+                        default=5, help="Number of epochs for PPO")
+    parser.add_argument("--lr", type=int,
                         default=1e-4, help="Learning rate")
-    parser.add_argument("--ent_coef", type="float",
+    parser.add_argument("--ent_coef", type=float,
                         default=1e-2, help="Entropy Coefficient")
-    parser.add_argument("--n_iters", type="float",
+    parser.add_argument("--n_iters", type=int,
                         default=1e-2, help="Number of iterations of learn+eval")
+    parser.add_argument("--model_parallel", type=bool,
+                        default=True, help="Apply model parallel or not")
     args = parser.parse_args()
     run(args)
