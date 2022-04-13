@@ -6,7 +6,7 @@ from stable_baselines3.ppo.ppo import PPO
 from nlp_gym.envs.text_generation.policy import LMActorCriticPolicy
 from nlp_gym.envs.text_generation.reward import RewardFunction
 from nlp_gym.envs.text_generation.observation import Observation
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import BasePolicy
 import argparse
@@ -25,11 +25,11 @@ class TestTextGenPool(TextGenPool):
 
 class RewardIncreasingNumbers(RewardFunction):
     def __init__(self, eos_token: str,
-                 min_num_tokens: int = 5,
+                 min_tokens: int,
                  include_prompt: bool = False) -> None:
         super().__init__()
         self.eos_token = eos_token
-        self.min_num_tokens = min_num_tokens
+        self.min_tokens = min_tokens
         self.include_prompt = include_prompt
 
     def is_number(self, text):
@@ -51,7 +51,7 @@ class RewardIncreasingNumbers(RewardFunction):
                 gen_tokens.remove(self.eos_token)
             number_tokens = [float(token)
                              for token in gen_tokens if self.is_number(token)]
-            if len(number_tokens) > self.min_num_tokens:  # must contain atleast min numbers
+            if len(number_tokens) > 0:
                 # then we check how many numbers are in the sorted order
                 sorted_count = 1
                 previous_token = number_tokens[0]
@@ -61,10 +61,7 @@ class RewardIncreasingNumbers(RewardFunction):
                         previous_token = token
                     else:
                         break
-                return (sorted_count/len(gen_tokens))
-            else:
-                return len(number_tokens) * 1e-4  # bonus to generate numbers
-
+                return (sorted_count/max(len(gen_tokens), self.min_tokens))
         return 0.0
 
 
@@ -73,17 +70,10 @@ def run(args):
     model_name = args.model_name
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     reward_fn = RewardIncreasingNumbers(
-        tokenizer.eos_token, args.reward_min_tokens)
+        tokenizer.eos_token, args.max_episode_length)
 
     data_pool = TestTextGenPool.prepare(tokenizer.eos_token)
     samples = [(sample, weight) for sample, weight in data_pool]
-
-    # text generation env
-    eval_env = TextGenEnv(tokenizer, reward_fn,
-                          max_text_length=args.max_prompt_length,
-                          max_steps=args.max_episode_length, samples=samples)
-    for sample, weight in data_pool:
-        eval_env.add_sample(sample, weight)
 
     # vectorized env for training
     train_env = make_vec_env(TextGenEnv,
@@ -135,8 +125,6 @@ if __name__ == "__main__":
         description="Fine-tune LM to generate controlled text")
     parser.add_argument("--model_name", type=str,
                         default="distilgpt2", help="Name of the AutoModelForCausalLM")
-    parser.add_argument("--reward_min_tokens", type=int,
-                        default=5, help="Minimum number of number tokens that model has to generate")
     parser.add_argument("--max_prompt_length", type=int,
                         default=10, help="Maximum length of input/prompt")
     parser.add_argument("--max_episode_length", type=int,
@@ -149,7 +137,7 @@ if __name__ == "__main__":
                         default=512, help="Batch size for PPO")
     parser.add_argument("--n_epochs", type=int,
                         default=5, help="Number of epochs for PPO")
-    parser.add_argument("--lr", type=int,
+    parser.add_argument("--lr", type=float,
                         default=1e-4, help="Learning rate")
     parser.add_argument("--ent_coef", type=float,
                         default=1e-2, help="Entropy Coefficient")
