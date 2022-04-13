@@ -6,18 +6,19 @@ from stable_baselines3.ppo.ppo import PPO
 from nlp_gym.envs.text_generation.policy import LMActorCriticPolicy
 from nlp_gym.envs.text_generation.reward import RewardFunction
 from nlp_gym.envs.text_generation.observation import Observation
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.policies import BasePolicy
 import argparse
 
 
 class TestTextGenPool(TextGenPool):
     @classmethod
-    def prepare(cls):
-        samples = [Sample(id=f"{id}",
-                          prompt_or_input_text=f"{id}",  # a dummy prompt
+    def prepare(cls, prompt: str):
+        samples = [Sample(id=0,
+                          prompt_or_input_text=prompt,  # a dummy prompt
                           references=[]
-                          ) for id in range(int(1e+3))]
+                          )]
         pool_instance = cls(samples)
         return pool_instance
 
@@ -74,8 +75,7 @@ def run(args):
     reward_fn = RewardIncreasingNumbers(
         tokenizer.eos_token, args.reward_min_tokens)
 
-    # data pool
-    data_pool = TestTextGenPool.prepare()
+    data_pool = TestTextGenPool.prepare(tokenizer.eos_token)
     samples = [(sample, weight) for sample, weight in data_pool]
 
     # text generation env
@@ -98,42 +98,35 @@ def run(args):
                              })
 
     # instantiate the PPO alg with the model
-    model = PPO(policy=LMActorCriticPolicy,
-                env=train_env,
-                policy_kwargs={
-                    "model_name": model_name,
-                    "apply_model_parallel": args.model_parallel,
-                },
-                n_steps=args.n_steps,
-                batch_size=args.batch_size,
-                verbose=1,
-                learning_rate=args.lr,
-                n_epochs=args.n_epochs,
-                ent_coef=args.ent_coef)
-
-    run_episode(model,  eval_env, data_pool)
+    alg = PPO(policy=LMActorCriticPolicy,
+              env=train_env,
+              policy_kwargs={
+                  "model_name": model_name,
+                  "apply_model_parallel": args.model_parallel,
+              },
+              n_steps=args.n_steps,
+              batch_size=args.batch_size,
+              verbose=1,
+              learning_rate=args.lr,
+              n_epochs=args.n_epochs,
+              ent_coef=args.ent_coef)
 
     # train
-    for i in range(args.n_iters):
-        model.learn(args.n_parallel_envs * args.n_steps)
-        run_episode(model,  eval_env, data_pool)
+    for i in range(int(args.n_iters)):
+        alg.learn(args.n_parallel_envs * args.n_steps)
+        generate_text(alg.policy, tokenizer, data_pool.sample(),
+                      args.max_episode_length)
 
 
-def run_episode(model: PPO,
-                env: TextGenEnv,
-                data_pool: CommonGen,
-                sample: Sample = None):
-    if not sample:
-        sample = data_pool.sample()
-    print(sample)
-    obs = env.reset(sample)
-    done = False
-    state = None
-    while not done:
-        action, state = model.predict(obs, state)
-        obs, reward, done, info = env.step(action)
-    print(reward)
-    print(info)
+def generate_text(policy: BasePolicy,
+                  tokenizer: AutoTokenizer,
+                  sample: Sample,
+                  max_length: int):
+    gen_kwargs = {"max_new_tokens": max_length}
+    generated_text = policy.generate(tokenizer,
+                                     sample.prompt_or_input_text,
+                                     gen_kwargs)
+    print(generated_text)
 
 
 if __name__ == "__main__":
@@ -161,7 +154,7 @@ if __name__ == "__main__":
     parser.add_argument("--ent_coef", type=float,
                         default=1e-2, help="Entropy Coefficient")
     parser.add_argument("--n_iters", type=int,
-                        default=1e-2, help="Number of iterations of learn+eval")
+                        default=1e+2, help="Number of iterations of learn+eval")
     parser.add_argument("--model_parallel", type=bool,
                         default=True, help="Apply model parallel or not")
     args = parser.parse_args()

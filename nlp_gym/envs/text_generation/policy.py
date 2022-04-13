@@ -7,7 +7,7 @@ from gym.spaces.dict import Dict as DictSpace
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.type_aliases import Schedule
 from torch import nn
-from transformers import AdamW, AutoModelForCausalLM
+from transformers import AdamW, AutoModelForCausalLM, AutoTokenizer
 from stable_baselines3.common.distributions import CategoricalDistribution
 from copy import deepcopy
 from transformers.generation_utils import top_k_top_p_filtering
@@ -261,3 +261,12 @@ class LMActorCriticPolicy(BasePolicy):
             return self
         else:
             return super().to(device)
+
+    def generate(self, tokenizer: AutoTokenizer, text: str,
+                 generation_kwargs: dict = {}):
+        input_ids = tokenizer.encode(text, return_tensors="pt").to(
+            self._policy_model.transformer.first_device)
+        output = self._policy_model.generate(input_ids, **generation_kwargs)
+        output_string = tokenizer.decode(output[0], skip_special_tokens=True)
+        output_tokens = tokenizer.convert_ids_to_tokens(output[0])
+        return output_tokens, output_string
