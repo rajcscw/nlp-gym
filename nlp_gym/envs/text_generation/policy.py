@@ -216,9 +216,9 @@ class LMActorCriticPolicy(BasePolicy):
 
         return values, log_prob, entropy
 
-    def _forward_ref_model(self, input_ids: torch.tensor,
-                           attention_mask: torch.tensor,
-                           action: int):
+    def get_log_probs_ref_model(self, input_ids: torch.tensor,
+                                attention_mask: torch.tensor,
+                                action: torch.tensor):
         model_kwargs = {
             "attention_mask": attention_mask,
         }
@@ -232,28 +232,6 @@ class LMActorCriticPolicy(BasePolicy):
             action_logits=next_token_logits)
         log_prob = dist.log_prob(action)
         return log_prob
-
-    def compute_ref_divergence(self, observation: Dict[str, torch.tensor], action: int):
-        with torch.no_grad():
-            action = torch.tensor(action).to(self.device)
-            input_ids = torch.from_numpy(
-                observation["input_encoded_pt"]).reshape(1, -1).to(self.device).int()
-            attention_mask = torch.from_numpy(
-                observation["input_attention_mask_pt"]).reshape(1, -1).to(self.device)
-
-            # target
-            target_probs = self._forward_ref_model(
-                input_ids, attention_mask, action=action)
-
-            # current policy
-            _, log_prob, _, output = self._forward_policy(
-                input_ids, attention_mask, actions=action)
-
-            # KL divergence
-            log_ratio = log_prob - target_probs
-            approx_kl_div = ((torch.exp(log_ratio) - 1) -
-                             log_ratio).cpu().item()
-            return approx_kl_div
 
     def to(self, device):
         if self._apply_model_parallel:

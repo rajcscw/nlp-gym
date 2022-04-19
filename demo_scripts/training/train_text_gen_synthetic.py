@@ -1,15 +1,17 @@
+import argparse
+
 from nlp_gym.data_pools.custom_text_generation_pools import CommonGen, Sample
 from nlp_gym.data_pools.text_generation_pool import TextGenPool
+from nlp_gym.envs.text_generation.callback import KLRewardCallback
 from nlp_gym.envs.text_generation.env import TextGenEnv
-from transformers import AutoTokenizer
-from stable_baselines3.ppo.ppo import PPO
-from nlp_gym.envs.text_generation.policy import LMActorCriticPolicy
-from nlp_gym.envs.text_generation.reward import RewardFunction
 from nlp_gym.envs.text_generation.observation import Observation
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from nlp_gym.envs.text_generation.policy import LMActorCriticPolicy
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import BasePolicy
-import argparse
+from stable_baselines3.common.vec_env import SubprocVecEnv
+from nlp_gym.envs.text_generation.test_reward import RewardIncreasingNumbers
+from stable_baselines3.ppo.ppo import PPO
+from transformers import AutoTokenizer
 
 
 class TestTextGenPool(TextGenPool):
@@ -21,48 +23,6 @@ class TestTextGenPool(TextGenPool):
                           )]
         pool_instance = cls(samples)
         return pool_instance
-
-
-class RewardIncreasingNumbers(RewardFunction):
-    def __init__(self, eos_token: str,
-                 min_tokens: int,
-                 include_prompt: bool = False) -> None:
-        super().__init__()
-        self.eos_token = eos_token
-        self.min_tokens = min_tokens
-        self.include_prompt = include_prompt
-
-    def is_number(self, text):
-        try:
-            float(text)
-            return True
-        except ValueError:
-            return False
-
-    def __call__(self, prev_observation: Observation,
-                 action: int,
-                 current_observation: Observation,
-                 done: bool) -> float:
-        if done:
-            gen_tokens = [
-                current_observation.prompt_or_input_text] if self.include_prompt else []
-            gen_tokens.extend(current_observation.action_history)
-            if self.eos_token in gen_tokens:
-                gen_tokens.remove(self.eos_token)
-            number_tokens = [float(token)
-                             for token in gen_tokens if self.is_number(token)]
-            if len(number_tokens) > 0:
-                # then we check how many numbers are in the sorted order
-                sorted_count = 1
-                previous_token = number_tokens[0]
-                for token in number_tokens[1:]:
-                    if token > previous_token:
-                        sorted_count += 1
-                        previous_token = token
-                    else:
-                        break
-                return (sorted_count/max(len(gen_tokens), self.min_tokens))
-        return 0.0
 
 
 def run(args):
@@ -101,9 +61,13 @@ def run(args):
               n_epochs=args.n_epochs,
               ent_coef=args.ent_coef)
 
+    # callback to augment rewards with KL penalty
+    kl_callback = KLRewardCallback(
+        batch_size=args.batch_size, kl_coeff=args.kl_coeff)
+
     # train
     for i in range(int(args.n_iters)):
-        alg.learn(args.n_parallel_envs * args.n_steps)
+        alg.learn(args.n_parallel_envs * args.n_steps, callback=kl_callback)
         generate_text(alg.policy, tokenizer, data_pool.sample(),
                       args.max_episode_length)
 
@@ -143,6 +107,8 @@ if __name__ == "__main__":
                         default=1e-2, help="Entropy Coefficient")
     parser.add_argument("--n_iters", type=int,
                         default=1e+2, help="Number of iterations of learn+eval")
+    parser.add_argument("--kl_coeff", type=float,
+                        default=1e-3, help="KL Coefficient")
     parser.add_argument("--model_parallel", type=bool,
                         default=True, help="Apply model parallel or not")
     args = parser.parse_args()
